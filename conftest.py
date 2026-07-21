@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import datetime
 import logging
 import platform
@@ -9,6 +10,12 @@ import sys
 from pathlib import Path
 
 import pytest
+
+# Import pytest_html for screenshot embedding
+try:
+    import pytest_html
+except ImportError:
+    pytest_html = None  # Will disable screenshot embedding if not installed
 
 # ── Logging configuration ─────────────────────────────────────────────────────
 # Do NOT call logging.basicConfig() here — pytest manages its own log handlers.
@@ -55,5 +62,59 @@ def pytest_html_results_summary(prefix, summary, postfix):
         "td.col-duration { color: #7f8c8d; }"
         ".summary-passes  { background:#eafaf1; border-left:4px solid #27ae60; padding:8px 16px; border-radius:4px; margin:4px 0; }"
         ".summary-failures { background:#fdedec; border-left:4px solid #e74c3c; padding:8px 16px; border-radius:4px; margin:4px 0; }"
+        ".screenshot { max-width: 100%; border: 2px solid #e74c3c; border-radius: 4px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }"
         "</style>"
     ])
+
+
+# ── Screenshot capture on test failure ────────────────────────────────────────
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Capture screenshot on test failure and attach to HTML report."""
+    outcome = yield
+    report = outcome.get_result()
+    
+    # Only capture screenshot for test call failures (not setup/teardown)
+    if report.when == "call" and report.failed:
+        # Create screenshots directory
+        screenshot_dir = Path("artifacts/test_screenshots")
+        screenshot_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Try to get driver from test instance
+        driver = None
+        if hasattr(item.instance, "driver"):
+            driver = item.instance.driver
+        
+        if driver:
+            try:
+                # Generate screenshot filename with timestamp
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                platform_name = getattr(item.instance, "platform", "unknown")
+                screenshot_name = f"{item.nodeid.replace('::', '_').replace('/', '_')}_{platform_name}_{timestamp}.png"
+                screenshot_path = screenshot_dir / screenshot_name
+                
+                # Capture screenshot
+                driver.save_screenshot(str(screenshot_path))
+                logger.info(f"Screenshot saved: {screenshot_path}")
+                
+                # Attach screenshot to HTML report (embedded as base64)
+                with open(screenshot_path, "rb") as f:
+                    screenshot_data = base64.b64encode(f.read()).decode("utf-8")
+                
+                # Add screenshot to report extras
+                extra = getattr(report, "extra", [])
+                if extra is None:
+                    extra = []
+                    
+                # Only embed in HTML if pytest_html is available
+                if pytest_html is not None:
+                    extra.append(pytest_html.extras.html(
+                        f'<div><h3>Failure Screenshot</h3>'
+                        f'<img src="data:image/png;base64,{screenshot_data}" class="screenshot" '
+                        f'alt="Screenshot at failure" /></div>'
+                    ))
+                    report.extra = extra
+                
+            except Exception as e:
+                logger.error(f"Failed to capture screenshot: {e}")

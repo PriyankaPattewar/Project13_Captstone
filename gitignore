@@ -1,0 +1,17 @@
+venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.env
+.venv/
+
+# Test artifacts
+artifacts/test_screenshots/*.png
+test_report_*.html
+appium.log
+*.pid
+
+# pytest cache
+.pytest_cache/
+htmlcov/
+.coverage

@@ -1,7 +1,8 @@
 """Generated Appium pytest script for Product Listing."""
 
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Tuple
+
 from appium.webdriver.common.appiumby import AppiumBy
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -12,17 +13,43 @@ class TestProductListing:
 
     def setup_method(self) -> None:
         """Create the Appium driver and explicit wait before each test."""
+        # Read configuration from environment
+        platform = os.getenv("PLATFORM_NAME", "Android")
+        platform_version = os.getenv("PLATFORM_VERSION", "14.0")
+        device_name = os.getenv("DEVICE_NAME", "Android Emulator")
+        app_path = os.getenv("APP_PATH", "")
+        appium_server = os.getenv("APPIUM_SERVER_URL", "http://127.0.0.1:4723")
+        
         desired_caps = {
-            "platformName": "Android",
-    "automationName": "UiAutomator2",
-    "deviceName": "Android Emulator",
-    "app": "C:/Users/Reshma.R/MobileAppTesting/capstone-cross-platform-mobile-test-script-generator/demo_mobile_apps/mda-2.2.0-25.apk",
-    "appPackage": "com.saucelabs.mydemoapp.android",
-    "appActivity": "com.saucelabs.mydemoapp.android.view.activities.SplashActivity",
-    "noReset": True,
+            "platformName": platform,
+            "deviceName": device_name,
+            "app": app_path,
+            "noReset": True,
         }
-        self.driver = self._create_driver(desired_caps)
+        
+        # Platform-specific capabilities
+        if platform.lower() == "ios":
+            desired_caps["automationName"] = "XCUITest"
+            # platformVersion is optional for iOS and can cause SDK mismatch issues
+            # iOS-specific XCUITest options for better stability
+            desired_caps["wdaLaunchTimeout"] = 180000  # 3 minutes for WDA launch
+            desired_caps["wdaConnectionTimeout"] = 180000  # 3 minutes for WDA connection
+            desired_caps["isHeadless"] = False  # Run with UI (already pre-booted)
+            desired_caps["usePrebuiltWDA"] = True  # Use prebuilt WDA if available
+        else:  # Android
+            desired_caps["automationName"] = "UiAutomator2"
+            desired_caps["platformVersion"] = platform_version
+            # Let Appium auto-detect appPackage and appActivity from APK manifest
+            # This is more reliable than hardcoding activity names
+            # Android-specific options for better app startup
+            desired_caps["autoGrantPermissions"] = True  # Auto-grant runtime permissions
+            desired_caps["appWaitActivity"] = "*"  # Wait for any activity to start
+            desired_caps["appWaitDuration"] = 60000  # Wait up to 60 seconds for app to start
+            desired_caps["androidInstallTimeout"] = 90000  # 90 seconds for app installation
+        
+        self.driver = self._create_driver(desired_caps, appium_server)
         self.wait = WebDriverWait(self.driver, 10) if WebDriverWait is not None else None
+        self.platform = platform
 
     def teardown_method(self) -> None:
         """Quit the Appium session after the test finishes."""
@@ -30,7 +57,7 @@ class TestProductListing:
             self.driver.quit()
 
     def tap(self, locator_strategy: str, locator_value: str) -> None:
-        """Tap an element using a UiAutomator2 locator and an explicit wait."""
+        """Tap an element using a platform-appropriate locator and an explicit wait."""
         locator = self._build_locator(locator_strategy, locator_value)
         if self.wait is not None and EC is not None:
             element = self.wait.until(EC.element_to_be_clickable(locator))
@@ -39,7 +66,7 @@ class TestProductListing:
         element.click()
 
     def type(self, locator_strategy: str, locator_value: str, text: str) -> None:
-        """Type text into an editable field using a UiAutomator2 locator."""
+        """Type text into an editable field using a platform-appropriate locator."""
         locator = self._build_locator(locator_strategy, locator_value)
         if self.wait is not None and EC is not None:
             element = self.wait.until(EC.element_to_be_clickable(locator))
@@ -49,26 +76,30 @@ class TestProductListing:
         element.send_keys(text)
 
     def scroll(self, locator_strategy: str, locator_value: str) -> None:
-        """Scroll until a target element is visible using UiAutomator2."""
-        selector = self._build_uiautomator_selector(locator_strategy, locator_value)
-        scroll_command = (
-            f"new UiScrollable(new UiSelector().scrollable(true)).scrollIntoView({self._build_uiautomator_selector(locator_strategy, locator_value)})"
-        )
-        self.driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR, scroll_command)
+        """Scroll until a target element is visible (Android only)."""
+        if self.platform.lower() == "android":
+            selector = self._build_uiautomator_selector(locator_strategy, locator_value)
+            scroll_command = (
+                f"new UiScrollable(new UiSelector().scrollable(true)).scrollIntoView({self._build_uiautomator_selector(locator_strategy, locator_value)})"
+            )
+            self.driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR, scroll_command)
         if self.wait is not None and EC is not None:
             self.wait.until(EC.visibility_of_element_located(self._build_locator(locator_strategy, locator_value)))
 
-    def _create_driver(self, desired_caps: Dict[str, Any]) -> Any:
-        """Create the Appium driver."""
+    def _create_driver(self, desired_caps: Dict[str, Any], server_url: str) -> Any:
+        """Create the Appium driver with platform-appropriate options."""
         from appium import webdriver
-        from appium.options.android import UiAutomator2Options
+        
+        platform = desired_caps.get("platformName", "Android")
+        
+        if platform.lower() == "ios":
+            from appium.options.ios import XCUITestOptions
+            options = XCUITestOptions().load_capabilities(desired_caps)
+        else:  # Android
+            from appium.options.android import UiAutomator2Options
+            options = UiAutomator2Options().load_capabilities(desired_caps)
 
-        options = UiAutomator2Options().load_capabilities(desired_caps)
-
-        return webdriver.Remote(
-            "http://127.0.0.1:4723",
-            options=options,
-        )
+        return webdriver.Remote(server_url, options=options)
 
     def _build_locator(self, locator_strategy: str, locator_value: str) -> Tuple[str, str]:
         """Convert a logical locator into an Appium locator tuple."""
@@ -79,13 +110,18 @@ class TestProductListing:
         if locator_strategy == "accessibility_id":
             return (AppiumBy.ACCESSIBILITY_ID, locator_value)
 
-        return (
-            AppiumBy.ANDROID_UIAUTOMATOR,
-            self._build_uiautomator_selector(locator_strategy, locator_value),
-    )
+        # Fallback for Android
+        if self.platform.lower() == "android":
+            return (
+                AppiumBy.ANDROID_UIAUTOMATOR,
+                self._build_uiautomator_selector(locator_strategy, locator_value),
+            )
+        else:
+            # iOS fallback to name or accessibility_id
+            return (AppiumBy.NAME, locator_value)
 
     def _build_uiautomator_selector(self, locator_strategy: str, locator_value: str) -> str:
-        """Create a UiAutomator2 selector string without using fragile XPath."""
+        """Create a UiAutomator2 selector string without using fragile XPath (Android only)."""
         strategy = (locator_strategy or "text").strip().lower()
         if strategy == "accessibility_id":
             return f'new UiSelector().description("{locator_value}")'
