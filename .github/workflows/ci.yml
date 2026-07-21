@@ -192,7 +192,6 @@ jobs:
           - platform: iOS
             os: macos-latest
             device: iPhone 17 Pro
-            platformVersion: '17.0'
             appPath: demo_mobile_apps/SauceLabs-Demo-App.Simulator.app
             appiumDriver: xcuitest
           - platform: Android
@@ -344,70 +343,22 @@ jobs:
           ls -la
           cd ..
       
-      - name: Set up iOS Simulator (iOS)
-        if: matrix.platform == 'iOS'
-        timeout-minutes: 10
-        run: |
-          echo "Listing available simulators..."
-          xcrun simctl list devices available
-          
-          # Find and boot simulator
-          DEVICE_ID=$(xcrun simctl list devices available | grep -m 1 '${{ matrix.device }}' | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/')
-          echo "Device ID: $DEVICE_ID"
-          
-          # Boot simulator
-          xcrun simctl boot $DEVICE_ID || echo "Simulator may already be booted"
-          
-          # Wait for simulator to fully boot (check for "Booted" status)
-          echo "Waiting for simulator to boot..."
-          for i in {1..60}; do
-            STATUS=$(xcrun simctl list devices | grep "$DEVICE_ID" | grep -o "Booted" || echo "")
-            if [ "$STATUS" = "Booted" ]; then
-              echo "✓ Simulator booted successfully"
-              break
-            fi
-            echo "Waiting... ($i/60)"
-            sleep 2
-          done
-          
-          # Give simulator extra time to fully initialize
-          echo "Allowing simulator to fully initialize..."
-          sleep 15
-          
-          # Verify simulator is ready
-          xcrun simctl list devices | grep "$DEVICE_ID"
-      
-      - name: Install SauceLabs Demo App (iOS)
+      # iOS - XCUITest driver will handle simulator boot and app installation automatically
+      # Just verify the app exists
+      - name: Verify iOS App (iOS)
         if: matrix.platform == 'iOS'
         run: |
-          # Find booted device ID
-          echo "Looking for booted simulators..."
-          xcrun simctl list devices | grep Booted
-          
-          DEVICE_ID=$(xcrun simctl list devices | grep -E 'iPhone.*Booted' | head -n 1 | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/')
-          
-          if [ -z "$DEVICE_ID" ]; then
-            echo "ERROR: No booted simulator found"
-            echo "All devices:"
-            xcrun simctl list devices
-            exit 1
-          fi
-          
-          echo "Installing app on device: $DEVICE_ID"
-          
-          # Install app
-          if xcrun simctl install "$DEVICE_ID" "${{ matrix.appPath }}"; then
-            echo "✓ App installed successfully"
+          echo "Verifying iOS app exists..."
+          if [ -d "${{ matrix.appPath }}" ]; then
+            echo "✓ App found at ${{ matrix.appPath }}"
+            ls -la "${{ matrix.appPath }}"
           else
-            echo "ERROR: Failed to install app"
-            echo "Checking if app exists:"
-            ls -la ${{ matrix.appPath }}
+            echo "✗ ERROR: App not found at ${{ matrix.appPath }}"
             exit 1
           fi
           
-          # Verify installation
-          echo "Installed apps:"
-          xcrun simctl listapps "$DEVICE_ID" | grep -i sauce || echo "App may not be listed yet"
+          echo "Available simulators:"
+          xcrun simctl list devices available | grep "${{ matrix.device }}" || echo "No exact match, XCUITest will find compatible device"
       
       # Common Appium setup
       - name: Start Appium Server
@@ -452,7 +403,7 @@ jobs:
           cat > .env << EOF
           APPIUM_SERVER_URL=http://127.0.0.1:4723
           PLATFORM_NAME=${{ matrix.platform }}
-          PLATFORM_VERSION=${{ matrix.platformVersion }}
+          PLATFORM_VERSION=${{ matrix.platformVersion || '' }}
           DEVICE_NAME=${{ matrix.device }}
           APP_PATH=$(pwd)/${{ matrix.appPath }}
           SELF_HEALING_ENABLED=true
@@ -464,10 +415,11 @@ jobs:
       
       # Run tests
       - name: Run Login Test
+        timeout-minutes: 15  # Allow time for simulator boot (iOS) or emulator startup (Android)
         env:
           APPIUM_SERVER_URL: http://127.0.0.1:4723
           PLATFORM_NAME: ${{ matrix.platform }}
-          PLATFORM_VERSION: ${{ matrix.platformVersion }}
+          PLATFORM_VERSION: ${{ matrix.platformVersion || '' }}  # Empty for iOS, set for Android
           DEVICE_NAME: ${{ matrix.device }}
           APP_PATH: ${{ github.workspace }}/${{ matrix.appPath }}
           SELF_HEALING_ENABLED: "true"

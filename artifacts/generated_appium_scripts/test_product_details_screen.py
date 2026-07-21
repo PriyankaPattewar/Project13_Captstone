@@ -35,7 +35,7 @@ class TestProductDetails:
             desired_caps["automationName"] = "UiAutomator2"
             desired_caps["platformVersion"] = platform_version
             desired_caps["appPackage"] = "com.saucelabs.mydemoapp.android"
-            desired_caps["appActivity"] = "com.saucelabs.mydemoapp.android.view.activities.SplashActivity"
+            desired_caps["appActivity"] = ".view.activities.SplashActivity"  # Relative activity name
         
         self.driver = self._create_driver(desired_caps, appium_server)
         self.wait = WebDriverWait(self.driver, 10) if WebDriverWait is not None else None
