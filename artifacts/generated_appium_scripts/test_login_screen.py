@@ -170,10 +170,12 @@ class TestLogin:
 
     def test_login(self) -> None:
         """Exercise the screen actions discovered by the locator agent."""
-        # Step 1: tap the Menu element.
-        self.tap('resource_id', 'com.swaglabsmobileapp:id/menuIV')
+        # Step 1: tap the Menu element (COMMENTED - element ID incorrect)
+        # TODO: Get correct menu element ID from Appium Inspector or screenshot
+        # self.tap('resource_id', 'com.swaglabsmobileapp:id/menuIV')
 
         # Step 2: tap the Login Menu Item element.
+        # Try this first - may not need menu tap if login is visible
         self.tap('accessibility_id', 'Login Menu Item')
 
         # Step 3: type the Username element.
@@ -184,7 +186,4 @@ class TestLogin:
 
         # Step 5: tap the Login Button element.
         self.tap('resource_id', 'com.swaglabsmobileapp:id/loginBtn')
-
-        # Submit login
-        self.tap('resource_id', 'com.saucelabs.mydemoapp.android:id/loginBtn')
 

@@ -11,6 +11,12 @@ from pathlib import Path
 
 import pytest
 
+# Import pytest_html for screenshot embedding
+try:
+    import pytest_html
+except ImportError:
+    pytest_html = None  # Will disable screenshot embedding if not installed
+
 # ── Logging configuration ─────────────────────────────────────────────────────
 # Do NOT call logging.basicConfig() here — pytest manages its own log handlers.
 # Log level and format are controlled via --log-cli-level in reporter_agent.py.
@@ -100,20 +106,15 @@ def pytest_runtest_makereport(item, call):
                 extra = getattr(report, "extra", [])
                 if extra is None:
                     extra = []
-                extra.append(pytest_html.extras.html(
-                    f'<div><h3>Failure Screenshot</h3>'
-                    f'<img src="data:image/png;base64,{screenshot_data}" class="screenshot" '
-                    f'alt="Screenshot at failure" /></div>'
-                ))
-                report.extra = extra
+                    
+                # Only embed in HTML if pytest_html is available
+                if pytest_html is not None:
+                    extra.append(pytest_html.extras.html(
+                        f'<div><h3>Failure Screenshot</h3>'
+                        f'<img src="data:image/png;base64,{screenshot_data}" class="screenshot" '
+                        f'alt="Screenshot at failure" /></div>'
+                    ))
+                    report.extra = extra
                 
             except Exception as e:
                 logger.error(f"Failed to capture screenshot: {e}")
-
-
-# ── Import pytest_html extras for screenshot embedding ────────────────────────
-
-try:
-    import pytest_html
-except ImportError:
-    logger.warning("pytest-html not installed, screenshot embedding disabled")
