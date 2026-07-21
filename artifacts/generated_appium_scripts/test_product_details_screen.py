@@ -34,13 +34,18 @@ class TestProductDetails:
             # iOS-specific XCUITest options for better stability
             desired_caps["wdaLaunchTimeout"] = 180000  # 3 minutes for WDA launch
             desired_caps["wdaConnectionTimeout"] = 180000  # 3 minutes for WDA connection
-            desired_caps["shouldWaitForQuiescence"] = False  # Don't wait for app animations
-            desired_caps["simpleIsVisibleCheck"] = True  # Faster element visibility checks
+            desired_caps["isHeadless"] = False  # Run with UI (already pre-booted)
+            desired_caps["usePrebuiltWDA"] = True  # Use prebuilt WDA if available
         else:  # Android
             desired_caps["automationName"] = "UiAutomator2"
             desired_caps["platformVersion"] = platform_version
             # Let Appium auto-detect appPackage and appActivity from APK manifest
             # This is more reliable than hardcoding activity names
+            # Android-specific options for better app startup
+            desired_caps["autoGrantPermissions"] = True  # Auto-grant runtime permissions
+            desired_caps["appWaitActivity"] = "*"  # Wait for any activity to start
+            desired_caps["appWaitDuration"] = 60000  # Wait up to 60 seconds for app to start
+            desired_caps["androidInstallTimeout"] = 90000  # 90 seconds for app installation
         
         self.driver = self._create_driver(desired_caps, appium_server)
         self.wait = WebDriverWait(self.driver, 10) if WebDriverWait is not None else None

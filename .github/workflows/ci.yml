@@ -365,6 +365,7 @@ jobs:
           echo "Killing any existing simulator processes..."
           killall Simulator 2>/dev/null || true
           xcrun simctl shutdown all 2>/dev/null || true
+          sleep 2
           
           echo ""
           echo "Finding ${{ matrix.device }} simulator..."
@@ -380,19 +381,42 @@ jobs:
           echo "Found device ID: $DEVICE_ID"
           
           echo ""
-          echo "Pre-booting simulator..."
-          xcrun simctl boot "$DEVICE_ID" || echo "Simulator may already be booted"
+          echo "Erasing simulator to prevent data migration issues..."
+          xcrun simctl erase "$DEVICE_ID"
+          echo "✓ Simulator erased"
           
-          # Wait for boot to complete
-          echo "Waiting for boot to complete (checking bootstatus)..."
-          for i in {1..60}; do
-            STATUS=$(xcrun simctl list devices | grep "$DEVICE_ID" | awk -F'[()]' '{for(i=1;i<=NF;i++) if($i ~ /Booted/) print $i}')
+          echo ""
+          echo "Pre-booting simulator..."
+          xcrun simctl boot "$DEVICE_ID"
+          
+          # Wait for boot to complete with explicit status checks
+          echo "Waiting for boot to complete..."
+          BOOT_TIMEOUT=180  # 3 minutes
+          ELAPSED=0
+          while [ $ELAPSED -lt $BOOT_TIMEOUT ]; do
+            STATUS=$(xcrun simctl list devices | grep "$DEVICE_ID" | grep -o "Booted" || echo "")
             if [ "$STATUS" = "Booted" ]; then
-              echo "✓ Simulator booted successfully after $i checks"
+              echo "✓ Simulator booted successfully after ${ELAPSED}s"
               break
             fi
-            sleep 2
+            
+            # Check if stuck on data migration
+            BOOTSTATUS=$(xcrun simctl bootstatus "$DEVICE_ID" 2>&1 || echo "")
+            if echo "$BOOTSTATUS" | grep -q "Data Migration"; then
+              echo "⚠️  WARNING: Simulator stuck on Data Migration - this may timeout"
+            fi
+            
+            echo "Waiting... (${ELAPSED}s/${BOOT_TIMEOUT}s)"
+            sleep 5
+            ELAPSED=$((ELAPSED + 5))
           done
+          
+          if [ $ELAPSED -ge $BOOT_TIMEOUT ]; then
+            echo "✗ ERROR: Simulator failed to boot within ${BOOT_TIMEOUT}s"
+            echo "Final status:"
+            xcrun simctl list devices | grep "$DEVICE_ID"
+            exit 1
+          fi
           
           # Give extra time for full initialization
           echo "Allowing additional time for initialization..."
