@@ -90,7 +90,7 @@ jobs:
         continue-on-error: true
       
       - name: Archive test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
@@ -126,7 +126,7 @@ jobs:
         continue-on-error: true
       
       - name: Upload security reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: security-reports
@@ -352,7 +352,7 @@ jobs:
           fi
       
       - name: Upload test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: appium-test-reports-${{ matrix.platform }}
@@ -362,7 +362,7 @@ jobs:
             artifacts/test_execution_reports/
       
       - name: Upload screenshots on failure
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: failure-screenshots-${{ matrix.platform }}
@@ -401,7 +401,7 @@ jobs:
             .
       
       - name: Upload build artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: package
           path: dist/*.tar.gz
@@ -471,7 +471,7 @@ jobs:
           echo "This requires actual LLM calls during integration tests." >> cost-report.md
       
       - name: Upload cost report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: cost-report
           path: cost-report.md
