@@ -131,23 +131,20 @@ class TestLogin:
 
     def test_login(self) -> None:
         """Exercise the screen actions discovered by the locator agent."""
-        self.tap('resource_id', 'com.saucelabs.mydemoapp.android:id/menuIV')
-        self.tap('resource_id', 'com.saucelabs.mydemoapp.android:id/loginBtn')
-
         # Step 1: tap the Menu element.
-        self.tap('resource_id', 'com.saucelabs.mydemoapp.android:id/menuIV')
+        self.tap('resource_id', 'com.swaglabsmobileapp:id/menuIV')
 
         # Step 2: tap the Login Menu Item element.
         self.tap('accessibility_id', 'Login Menu Item')
 
         # Step 3: type the Username element.
-        self.type('resource_id', 'com.saucelabs.mydemoapp.android:id/nameET', 'bod@example.com')
+        self.type('resource_id', 'com.swaglabsmobileapp:id/nameET', 'bob@example.com')
 
         # Step 4: type the Password element.
-        self.type('resource_id', 'com.saucelabs.mydemoapp.android:id/passwordET', '10203040')
+        self.type('resource_id', 'com.swaglabsmobileapp:id/passwordET', '10203040')
 
         # Step 5: tap the Login Button element.
-        self.tap('resource_id', 'com.saucelabs.mydemoapp.android:id/loginBtn')
+        self.tap('resource_id', 'com.swaglabsmobileapp:id/loginBtn')
 
         # Submit login
         self.tap('resource_id', 'com.saucelabs.mydemoapp.android:id/loginBtn')
