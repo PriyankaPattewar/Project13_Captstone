@@ -50,6 +50,10 @@ class TestLogin:
         self.driver = self._create_driver(desired_caps, appium_server)
         self.wait = WebDriverWait(self.driver, 10) if WebDriverWait is not None else None
         self.platform = platform
+        
+        # Dismiss Android compatibility popups (16 KB page size warning)
+        if platform.lower() == "android":
+            self._dismiss_android_popups()
 
     def teardown_method(self) -> None:
         """Quit the Appium session after the test finishes."""
@@ -128,6 +132,41 @@ class TestLogin:
         if strategy == "resource_id":
             return f'new UiSelector().resourceId("{locator_value}")'
         return f'new UiSelector().text("{locator_value}")'
+
+    def _dismiss_android_popups(self) -> None:
+        """Dismiss common Android system popups (16KB compatibility warning, permissions, etc.)."""
+        import time
+        time.sleep(2)  # Wait for popup to appear
+        
+        # List of button texts to try clicking (in order of preference)
+        dismiss_buttons = [
+            "Don't Show Again",  # Suppress future warnings
+            "OK",                # Standard dismiss
+            "Allow",             # Permissions
+            "Accept",            # Generic accept
+            "Continue",          # Generic continue
+            "Got it",            # Tutorial/help screens
+        ]
+        
+        for button_text in dismiss_buttons:
+            try:
+                # Try to find and click button using text
+                button_locator = (
+                    AppiumBy.ANDROID_UIAUTOMATOR,
+                    f'new UiSelector().text("{button_text}")'
+                )
+                button = self.driver.find_element(*button_locator)
+                if button.is_displayed():
+                    button.click()
+                    print(f"✓ Dismissed popup by clicking '{button_text}'")
+                    time.sleep(1)  # Wait for popup to close
+                    return
+            except Exception:
+                # Button not found, try next one
+                continue
+        
+        # No popup found or already dismissed
+        print("✓ No Android system popups detected")
 
     def test_login(self) -> None:
         """Exercise the screen actions discovered by the locator agent."""
