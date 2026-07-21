@@ -193,7 +193,7 @@ jobs:
             os: macos-latest
             device: iPhone 15
             platformVersion: '17.0'
-            appPath: demo_mobile_apps/SauceLabs-Demo-App.ipa
+            appPath: demo_mobile_apps/SauceLabs-Demo-App.Simulator.app
             appiumDriver: xcuitest
           - platform: Android
             os: ubuntu-latest
@@ -276,6 +276,29 @@ jobs:
           echo "Emulator started successfully"
       
       # iOS-specific setup
+      - name: Download SauceLabs Demo App (iOS)
+        if: matrix.platform == 'iOS'
+        run: |
+          mkdir -p demo_mobile_apps
+          # Download iOS simulator build (comes as a zip)
+          curl -L -o demo_mobile_apps/ios_app.zip \
+            https://github.com/saucelabs/sample-app-mobile/releases/download/2.7.1/iOS.Simulator.SauceLabs.Mobile.Sample.app.2.7.1.zip
+          
+          # Unzip the .app bundle
+          cd demo_mobile_apps
+          unzip -o ios_app.zip
+          
+          # Rename to expected name
+          APP_BUNDLE=$(find . -name "*.app" -type d -maxdepth 1 | head -n 1)
+          if [ -n "$APP_BUNDLE" ]; then
+            mv "$APP_BUNDLE" "SauceLabs-Demo-App.Simulator.app"
+            echo "Renamed $APP_BUNDLE to SauceLabs-Demo-App.Simulator.app"
+          fi
+          
+          # List contents to verify
+          ls -la
+          cd ..
+      
       - name: Set up iOS Simulator (iOS)
         if: matrix.platform == 'iOS'
         run: |
