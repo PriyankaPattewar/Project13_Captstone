@@ -68,7 +68,6 @@ class {class_name}:
         
         desired_caps = {{
             "platformName": platform,
-            "platformVersion": platform_version,
             "deviceName": device_name,
             "app": app_path,
             "noReset": True,
@@ -77,8 +76,10 @@ class {class_name}:
         # Platform-specific capabilities
         if platform.lower() == "ios":
             desired_caps["automationName"] = "XCUITest"
+            # platformVersion is optional for iOS and can cause SDK mismatch issues
         else:  # Android
             desired_caps["automationName"] = "UiAutomator2"
+            desired_caps["platformVersion"] = platform_version
             desired_caps["appPackage"] = "com.saucelabs.mydemoapp.android"
             desired_caps["appActivity"] = "com.saucelabs.mydemoapp.android.view.activities.SplashActivity"
         
