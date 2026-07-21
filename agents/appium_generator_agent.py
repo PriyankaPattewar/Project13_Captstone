@@ -5,7 +5,7 @@ from typing import Any, Dict
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from navigation_agent import NavigationAgent
+from agents.navigation_agent import NavigationAgent
 
 logger = logging.getLogger(__name__)
 
