@@ -191,7 +191,7 @@ jobs:
         include:
           - platform: iOS
             os: macos-latest
-            device: iPhone 15
+            device: iPhone 17 Pro
             platformVersion: '17.0'
             appPath: demo_mobile_apps/SauceLabs-Demo-App.Simulator.app
             appiumDriver: xcuitest
@@ -286,11 +286,25 @@ jobs:
       - name: Start Android Emulator (Android)
         if: matrix.platform == 'Android'
         timeout-minutes: 10
+        env:
+          ANDROID_AVD_HOME: ${{ github.workspace }}/.android/avd
         run: |
+          # Set AVD home to where it was actually created
+          export ANDROID_AVD_HOME="$HOME/.config/.android/avd"
+          
+          echo "AVD Home: $ANDROID_AVD_HOME"
+          echo "Listing AVDs:"
+          $ANDROID_HOME/emulator/emulator -list-avds
+          
+          # Start emulator
           $ANDROID_HOME/emulator/emulator -avd ${{ matrix.device }} -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect &
+          
+          # Wait for emulator to be ready
           adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done'
+          
+          # Verify emulator is running
           adb devices
-          echo "Emulator started successfully"
+          echo "✓ Emulator started successfully"
       
       # iOS-specific setup
       - name: Download SauceLabs Demo App (iOS)
