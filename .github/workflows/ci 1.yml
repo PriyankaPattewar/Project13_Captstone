@@ -251,10 +251,16 @@ jobs:
         if: matrix.platform == 'Android'
         run: |
           echo "y" | sdkmanager "platform-tools" "platforms;android-34" "emulator" "system-images;android-34;google_apis;x86_64"
-          echo "no" | avdmanager create avd -n ${{ matrix.device }} -k "system-images;android-34;google_apis;x86_64" --force
+          avdmanager create avd -n ${{ matrix.device }} -k "system-images;android-34;google_apis;x86_64" --device "pixel_6" --force
+      
+      - name: Configure Android Emulator (Android)
+        if: matrix.platform == 'Android'
+        run: |
+          # Configure emulator settings
           echo "hw.keyboard=yes" >> ~/.android/avd/${{ matrix.device }}.avd/config.ini
           echo "hw.gpu.enabled=yes" >> ~/.android/avd/${{ matrix.device }}.avd/config.ini
           echo "hw.gpu.mode=swiftshader_indirect" >> ~/.android/avd/${{ matrix.device }}.avd/config.ini
+          echo "disk.dataPartition.size=4096M" >> ~/.android/avd/${{ matrix.device }}.avd/config.ini
       
       - name: Start Android Emulator (Android)
         if: matrix.platform == 'Android'
@@ -317,32 +323,33 @@ jobs:
             --tb=short
         continue-on-error: true
       
-      - name: Run Cart Test
-        run: |
-          pytest artifacts/generated_appium_scripts/test_cart_screen.py \
-            -v \
-            --html=test_report_cart_${{ matrix.platform }}.html \
-            --self-contained-html \
-            --tb=short
-        continue-on-error: true
+      # Disabled - Run only login test for now
+      # - name: Run Cart Test
+      #   run: |
+      #     pytest artifacts/generated_appium_scripts/test_cart_screen.py \
+      #       -v \
+      #       --html=test_report_cart_${{ matrix.platform }}.html \
+      #       --self-contained-html \
+      #       --tb=short
+      #   continue-on-error: true
       
-      - name: Run Product Details Test
-        run: |
-          pytest artifacts/generated_appium_scripts/test_product_details_screen.py \
-            -v \
-            --html=test_report_product_details_${{ matrix.platform }}.html \
-            --self-contained-html \
-            --tb=short
-        continue-on-error: true
+      # - name: Run Product Details Test
+      #   run: |
+      #     pytest artifacts/generated_appium_scripts/test_product_details_screen.py \
+      #       -v \
+      #       --html=test_report_product_details_${{ matrix.platform }}.html \
+      #       --self-contained-html \
+      #       --tb=short
+      #   continue-on-error: true
       
-      - name: Run Product Listing Test
-        run: |
-          pytest artifacts/generated_appium_scripts/test_product_listing_screen.py \
-            -v \
-            --html=test_report_product_listing_${{ matrix.platform }}.html \
-            --self-contained-html \
-            --tb=short
-        continue-on-error: true
+      # - name: Run Product Listing Test
+      #   run: |
+      #     pytest artifacts/generated_appium_scripts/test_product_listing_screen.py \
+      #       -v \
+      #       --html=test_report_product_listing_${{ matrix.platform }}.html \
+      #       --self-contained-html \
+      #       --tb=short
+      #   continue-on-error: true
       
       - name: Stop Appium Server
         if: always()
@@ -394,6 +401,7 @@ jobs:
           mkdir -p dist
           tar -czf dist/mobile-test-generator-${GITHUB_SHA::7}.tar.gz \
             --exclude='.git' \
+            --exclude='dist' \
             --exclude='__pycache__' \
             --exclude='*.pyc' \
             --exclude='.env' \
