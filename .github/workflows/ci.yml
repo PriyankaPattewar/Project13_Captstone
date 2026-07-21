@@ -225,8 +225,27 @@ jobs:
       
       - name: Install Appium
         run: |
-          npm install -g appium@next
+          # Install Appium stable version (not @next to avoid peer dependency issues)
+          npm install -g appium
+          
+          # Verify Appium installation
+          appium --version
+          
+          # Install platform-specific driver
+          echo "Installing ${{ matrix.appiumDriver }} driver..."
           appium driver install ${{ matrix.appiumDriver }}
+          
+          # Verify driver installation
+          echo "Installed drivers:"
+          appium driver list --installed
+          
+          # Verify driver can load properly
+          if appium driver list --installed | grep -q "${{ matrix.appiumDriver }}"; then
+            echo "✓ ${{ matrix.appiumDriver }} driver installed successfully"
+          else
+            echo "✗ ERROR: ${{ matrix.appiumDriver }} driver installation failed!"
+            exit 1
+          fi
       
       # Android-specific setup
       - name: Enable KVM (Android)
@@ -398,10 +417,38 @@ jobs:
       # Common Appium setup
       - name: Start Appium Server
         run: |
+          # Start Appium in background
           appium --log-level info > appium.log 2>&1 &
-          echo $! > appium.pid
-          sleep 5
-          echo "Appium server started"
+          APPIUM_PID=$!
+          echo $APPIUM_PID > appium.pid
+          echo "Appium server PID: $APPIUM_PID"
+          
+          # Wait for Appium to be ready (check port 4723)
+          echo "Waiting for Appium server to start..."
+          for i in {1..30}; do
+            if curl -s http://127.0.0.1:4723/status > /dev/null 2>&1; then
+              echo "✓ Appium server is ready!"
+              curl -s http://127.0.0.1:4723/status | head -c 200
+              echo ""
+              break
+            fi
+            if ! ps -p $APPIUM_PID > /dev/null 2>&1; then
+              echo "ERROR: Appium server process died!"
+              echo "Last 50 lines of appium.log:"
+              tail -50 appium.log
+              exit 1
+            fi
+            echo "Waiting for server... ($i/30)"
+            sleep 2
+          done
+          
+          # Final verification
+          if ! curl -s http://127.0.0.1:4723/status > /dev/null 2>&1; then
+            echo "ERROR: Appium server failed to start after 60 seconds"
+            echo "Appium log:"
+            cat appium.log
+            exit 1
+          fi
       
       - name: Configure test environment
         env:
@@ -434,12 +481,27 @@ jobs:
           OPENAI_API_BASE: http://107.22.98.31:10501/v1
           OPENAI_MODEL: Azure#gpt-5.4
         run: |
+          echo "Starting login test for ${{ matrix.platform }}..."
+          set +e  # Don't exit immediately on error, we want to capture exit code
+          
           pytest artifacts/generated_appium_scripts/test_login_screen.py \
             -v \
             --html=test_report_login_${{ matrix.platform }}.html \
             --self-contained-html \
             --tb=short
-        continue-on-error: true
+          
+          TEST_EXIT_CODE=$?
+          
+          if [ $TEST_EXIT_CODE -eq 0 ]; then
+            echo "✓ Login test PASSED"
+          else
+            echo "✗ Login test FAILED (exit code: $TEST_EXIT_CODE)"
+            echo "Appium server log (last 100 lines):"
+            tail -100 appium.log || true
+          fi
+          
+          # Exit with test's exit code (this will fail the job if tests failed)
+          exit $TEST_EXIT_CODE
       
       # Disabled - Run only login test for now
       # - name: Run Cart Test
