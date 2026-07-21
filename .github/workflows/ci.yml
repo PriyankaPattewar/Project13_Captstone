@@ -198,7 +198,7 @@ jobs:
             os: ubuntu-latest
             device: Pixel_6_API_34
             platformVersion: '14.0'
-            appPath: demo_mobile_apps/Android.SauceLabs.Mobile.Sample.app.2.7.1.apk
+            appPath: demo_mobile_apps/mda-2.2.0-25.apk
             appiumDriver: uiautomator2
     
     steps:
@@ -253,12 +253,13 @@ jobs:
         if: matrix.platform == 'Android'
         uses: android-actions/setup-android@v3
       
-      - name: Download SauceLabs Demo App (Android)
-        if: matrix.platform == 'Android'
-        run: |
-          mkdir -p demo_mobile_apps
-          curl -L -o ${{ matrix.appPath }} \
-            https://github.com/saucelabs/sample-app-mobile/releases/download/2.7.1/Android.SauceLabs.Mobile.Sample.app.2.7.1.apk
+      # Android APK already in repo (mda-2.2.0-25.apk) - no download needed
+      # - name: Download SauceLabs Demo App (Android)
+      #   if: matrix.platform == 'Android'
+      #   run: |
+      #     mkdir -p demo_mobile_apps
+      #     curl -L -o ${{ matrix.appPath }} \
+      #       https://github.com/saucelabs/sample-app-mobile/releases/download/2.7.1/Android.SauceLabs.Mobile.Sample.app.2.7.1.apk
       
       - name: Create Android Emulator (Android)
         if: matrix.platform == 'Android'
