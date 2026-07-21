@@ -251,19 +251,31 @@ jobs:
         if: matrix.platform == 'Android'
         run: |
           echo "y" | sdkmanager "platform-tools" "platforms;android-34" "emulator" "system-images;android-34;google_apis;x86_64"
-          echo "no" | avdmanager create avd -n ${{ matrix.device }} -k "system-images;android-34;google_apis;x86_64" --device "pixel_6" --force
           
-          # Wait for AVD to be created and configure
+          # Create AVD without device profile (let it use defaults)
+          echo "no" | avdmanager create avd \
+            -n ${{ matrix.device }} \
+            -k "system-images;android-34;google_apis;x86_64" \
+            --force
+          
+          # Verify AVD was created
+          echo "Listing available AVDs:"
+          avdmanager list avd
+          
+          # Configure AVD if it exists
           AVD_CONFIG="$HOME/.android/avd/${{ matrix.device }}.avd/config.ini"
           if [ -f "$AVD_CONFIG" ]; then
+            echo "Configuring AVD..."
             echo "hw.keyboard=yes" >> "$AVD_CONFIG"
             echo "hw.gpu.enabled=yes" >> "$AVD_CONFIG"
             echo "hw.gpu.mode=swiftshader_indirect" >> "$AVD_CONFIG"
             echo "disk.dataPartition.size=4096M" >> "$AVD_CONFIG"
-            echo "AVD configured successfully"
+            echo "✓ AVD configured successfully"
           else
-            echo "Warning: config.ini not found at $AVD_CONFIG"
-            ls -la "$HOME/.android/avd/" || true
+            echo "ERROR: AVD config not found at $AVD_CONFIG"
+            echo "Contents of avd directory:"
+            ls -la "$HOME/.android/avd/" || echo "AVD directory not found"
+            exit 1
           fi
       
       - name: Start Android Emulator (Android)
@@ -301,19 +313,56 @@ jobs:
       
       - name: Set up iOS Simulator (iOS)
         if: matrix.platform == 'iOS'
+        timeout-minutes: 10
         run: |
+          echo "Listing available simulators..."
           xcrun simctl list devices available
-          # Boot a simulator
+          
+          # Find and boot simulator
           DEVICE_ID=$(xcrun simctl list devices available | grep -m 1 '${{ matrix.device }}' | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/')
           echo "Device ID: $DEVICE_ID"
-          xcrun simctl boot $DEVICE_ID || true
-          sleep 10
+          
+          # Boot simulator
+          xcrun simctl boot $DEVICE_ID || echo "Simulator may already be booted"
+          
+          # Wait for simulator to fully boot (check for "Booted" status)
+          echo "Waiting for simulator to boot..."
+          for i in {1..60}; do
+            STATUS=$(xcrun simctl list devices | grep "$DEVICE_ID" | grep -o "Booted" || echo "")
+            if [ "$STATUS" = "Booted" ]; then
+              echo "✓ Simulator booted successfully"
+              break
+            fi
+            echo "Waiting... ($i/60)"
+            sleep 2
+          done
+          
+          # Give simulator extra time to fully initialize
+          echo "Allowing simulator to fully initialize..."
+          sleep 15
+          
+          # Verify simulator is ready
+          xcrun simctl list devices | grep "$DEVICE_ID"
       
       - name: Install SauceLabs Demo App (iOS)
         if: matrix.platform == 'iOS'
         run: |
           DEVICE_ID=$(xcrun simctl list devices booted | grep -m 1 'iPhone' | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/')
-          xcrun simctl install $DEVICE_ID ${{ matrix.appPath }} || echo "App installation may require signing"
+          echo "Installing app on device: $DEVICE_ID"
+          
+          # Install app
+          if xcrun simctl install "$DEVICE_ID" "${{ matrix.appPath }}"; then
+            echo "✓ App installed successfully"
+          else
+            echo "ERROR: Failed to install app"
+            echo "Checking if app exists:"
+            ls -la ${{ matrix.appPath }}
+            exit 1
+          fi
+          
+          # Verify installation
+          echo "Installed apps:"
+          xcrun simctl listapps "$DEVICE_ID" | grep -i sauce || echo "App may not be listed yet"
       
       # Common Appium setup
       - name: Start Appium Server
