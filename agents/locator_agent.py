@@ -3,7 +3,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -294,9 +294,6 @@ class LocatorAgent:
 
     def _select_locator_strategy(self, element: Dict[str, Any]) -> tuple[str, str]:
         """Choose the best available locator strategy."""
-        override = self._guess_saucelabs_locator(element)
-        if override:
-                return override
         # 1. Accessibility ID
         value = self._extract_locator_value(
             element,
@@ -321,28 +318,24 @@ class LocatorAgent:
         if value:
             return "id", str(value)
 
-        # 4. MyDemoApp fallback
-        guess = self._guess_saucelabs_locator(element)
-        if guess:
-            return guess
-
-        # 5. Visible text
+        # 4. Visible text
         text_value = self._extract_locator_value(element, ("text",))
         if text_value:
             return "text", str(text_value)
 
-        # 6. UiAutomator
+        # 5. UiAutomator
         value = element.get("android_uiautomator") or element.get("uiautomator")
         if value:
             return "android_uiautomator", str(value)
 
-        # 7. Last fallback
-        label = str(element.get("label")or element.get("element")or "").lower()
+        # 6. Last fallback
+        label = str(element.get("label") or element.get("element") or "")
+        lower_label = label.lower()
 
-        if "username" in label:
+        if "username" in lower_label:
             return "android_uiautomator", 'new UiSelector().className("android.widget.EditText").instance(0)'
 
-        if "password" in label:
+        if "password" in lower_label:
             return "android_uiautomator", 'new UiSelector().className("android.widget.EditText").instance(1)'
 
         if label:
