@@ -382,6 +382,9 @@ jobs:
           echo "Found device ID: $DEVICE_ID"
           
           echo ""
+          echo "Shutting down simulator (if running)..."
+          xcrun simctl shutdown "$DEVICE_ID" || echo "Simulator was not running"
+          
           echo "Erasing simulator to prevent data migration issues..."
           xcrun simctl erase "$DEVICE_ID"
           echo "✓ Simulator erased"

@@ -170,20 +170,24 @@ class TestLogin:
 
     def test_login(self) -> None:
         """Exercise the screen actions discovered by the locator agent."""
-        # Step 1: tap the Menu element (COMMENTED - element ID incorrect)
-        # TODO: Get correct menu element ID from Appium Inspector or screenshot
-        # self.tap('resource_id', 'com.swaglabsmobileapp:id/menuIV')
-
-        # Step 2: tap the Login Menu Item element.
-        # Try this first - may not need menu tap if login is visible
-        self.tap('accessibility_id', 'Login Menu Item')
-
-        # Step 3: type the Username element.
-        self.type('resource_id', 'com.swaglabsmobileapp:id/nameET', 'bob@example.com')
-
-        # Step 4: type the Password element.
-        self.type('resource_id', 'com.swaglabsmobileapp:id/passwordET', '10203040')
-
-        # Step 5: tap the Login Button element.
-        self.tap('resource_id', 'com.swaglabsmobileapp:id/loginBtn')
+        import time
+        
+        # Step 1: Tap hamburger menu button to open drawer
+        # MYDEMOAPP uses 'open menu' as accessibility_id
+        time.sleep(2)  # Wait for app to fully load
+        self.tap('accessibility_id', 'open menu')
+        
+        # Step 2: Tap Login menu item in the drawer
+        time.sleep(1)  # Wait for menu to open
+        self.tap('accessibility_id', 'menu item log in')
+        
+        # Step 3: Type Username
+        time.sleep(1)  # Wait for login screen
+        self.type('accessibility_id', 'Username input field', 'bob@example.com')
+        
+        # Step 4: Type Password
+        self.type('accessibility_id', 'Password input field', '10203040')
+        
+        # Step 5: Tap Login Button
+        self.tap('accessibility_id', 'Login button')
 
