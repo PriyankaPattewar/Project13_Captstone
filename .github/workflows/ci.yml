@@ -382,15 +382,31 @@ jobs:
           echo "Found device ID: $DEVICE_ID"
           
           echo ""
-          echo "Shutting down simulator (if running)..."
-          xcrun simctl shutdown "$DEVICE_ID" || echo "Simulator was not running"
-          
-          echo "Erasing simulator to prevent data migration issues..."
-          xcrun simctl erase "$DEVICE_ID"
-          echo "✓ Simulator erased"
+          echo "Deleting simulator to avoid data migration issues..."
+          xcrun simctl shutdown "$DEVICE_ID" 2>/dev/null || true
+          xcrun simctl delete "$DEVICE_ID"
+          echo "✓ Simulator deleted"
           
           echo ""
-          echo "Pre-booting simulator..."
+          echo "Creating fresh simulator..."
+          # Get the device type ID
+          DEVICE_TYPE=$(xcrun simctl list devicetypes | grep "${{ matrix.device }}" | sed -E 's/.*\(([^)]+)\).*/\1/' | head -n 1)
+          if [ -z "$DEVICE_TYPE" ]; then
+            # Fallback: use generic iPhone device type
+            DEVICE_TYPE="com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro"
+          fi
+          echo "Device type: $DEVICE_TYPE"
+          
+          # Get the latest available iOS runtime
+          RUNTIME=$(xcrun simctl list runtimes available | grep "iOS" | tail -n 1 | sed -E 's/.*\(([^)]+)\).*/\1/')
+          echo "Runtime: $RUNTIME"
+          
+          # Create new simulator
+          DEVICE_ID=$(xcrun simctl create "CI-iPhone-17-Pro" "$DEVICE_TYPE" "$RUNTIME")
+          echo "✓ Created fresh simulator: $DEVICE_ID"
+          
+          echo ""
+          echo "Booting fresh simulator..."
           xcrun simctl boot "$DEVICE_ID"
           
           # Wait for boot to complete with explicit status checks
@@ -553,6 +569,17 @@ jobs:
         run: |
           if [ -f appium.pid ]; then
             kill $(cat appium.pid) || true
+          fi
+      
+      - name: Cleanup iOS Simulator
+        if: always() && matrix.platform == 'iOS'
+        run: |
+          echo "Cleaning up temporary simulator..."
+          DEVICE_ID=$(xcrun simctl list devices | grep "CI-iPhone-17-Pro" | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/' | head -n 1)
+          if [ -n "$DEVICE_ID" ]; then
+            xcrun simctl shutdown "$DEVICE_ID" 2>/dev/null || true
+            xcrun simctl delete "$DEVICE_ID" 2>/dev/null || true
+            echo "✓ Simulator cleaned up"
           fi
       
       - name: Upload test reports

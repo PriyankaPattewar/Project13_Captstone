@@ -173,9 +173,39 @@ class TestLogin:
         import time
         
         # Step 1: Tap hamburger menu button to open drawer
-        # MYDEMOAPP uses 'open menu' as accessibility_id
-        time.sleep(2)  # Wait for app to fully load
-        self.tap('accessibility_id', 'open menu')
+        time.sleep(3)  # Wait for app to fully load
+        
+        # Try multiple strategies to find and tap the hamburger menu
+        hamburger_tapped = False
+        strategies = [
+            ('accessibility_id', 'open menu'),
+            ('accessibility_id', 'menu'),
+            ('accessibility_id', 'Navigate up'),
+            ('xpath', '//android.view.ViewGroup[@content-desc="open menu"]'),
+            ('xpath', '//android.widget.ImageView[contains(@content-desc, "menu")]'),
+            ('xpath', '//*[@content-desc="open menu"]'),
+        ]
+        
+        for strategy_type, strategy_value in strategies:
+            try:
+                print(f"Trying {strategy_type}: {strategy_value}")
+                if strategy_type == 'accessibility_id':
+                    element = self.driver.find_element(AppiumBy.ACCESSIBILITY_ID, strategy_value)
+                else:  # xpath
+                    element = self.driver.find_element(AppiumBy.XPATH, strategy_value)
+                element.click()
+                print(f"✓ Hamburger menu tapped using {strategy_type}: {strategy_value}")
+                hamburger_tapped = True
+                break
+            except Exception as e:
+                print(f"✗ Failed with {strategy_type}: {strategy_value} - {str(e)[:100]}")
+                continue
+        
+        if not hamburger_tapped:
+            # Last resort: dump page source for debugging
+            print("\n=== PAGE SOURCE FOR DEBUGGING ===")
+            print(self.driver.page_source[:2000])  # Print first 2000 chars
+            raise Exception("Could not find hamburger menu with any strategy")
         
         # Step 2: Tap Login menu item in the drawer
         time.sleep(1)  # Wait for menu to open
