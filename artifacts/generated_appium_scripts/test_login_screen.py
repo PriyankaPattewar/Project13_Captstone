@@ -31,11 +31,16 @@ class TestLogin:
         if platform.lower() == "ios":
             desired_caps["automationName"] = "XCUITest"
             # platformVersion is optional for iOS and can cause SDK mismatch issues
+            # iOS-specific XCUITest options for better stability
+            desired_caps["wdaLaunchTimeout"] = 180000  # 3 minutes for WDA launch
+            desired_caps["wdaConnectionTimeout"] = 180000  # 3 minutes for WDA connection
+            desired_caps["shouldWaitForQuiescence"] = False  # Don't wait for app animations
+            desired_caps["simpleIsVisibleCheck"] = True  # Faster element visibility checks
         else:  # Android
             desired_caps["automationName"] = "UiAutomator2"
             desired_caps["platformVersion"] = platform_version
-            desired_caps["appPackage"] = "com.saucelabs.mydemoapp.android"
-            desired_caps["appActivity"] = ".view.activities.SplashActivity"  # Relative activity name
+            # Let Appium auto-detect appPackage and appActivity from APK manifest
+            # This is more reliable than hardcoding activity names
         
         self.driver = self._create_driver(desired_caps, appium_server)
         self.wait = WebDriverWait(self.driver, 10) if WebDriverWait is not None else None

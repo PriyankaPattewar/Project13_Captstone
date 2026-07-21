@@ -31,11 +31,16 @@ class TestCart:
         if platform.lower() == "ios":
             desired_caps["automationName"] = "XCUITest"
             # platformVersion is optional for iOS and can cause SDK mismatch issues
+            # iOS-specific XCUITest options for better stability
+            desired_caps["wdaLaunchTimeout"] = 180000  # 3 minutes for WDA launch
+            desired_caps["wdaConnectionTimeout"] = 180000  # 3 minutes for WDA connection
+            desired_caps["shouldWaitForQuiescence"] = False  # Don't wait for app animations
+            desired_caps["simpleIsVisibleCheck"] = True  # Faster element visibility checks
         else:  # Android
             desired_caps["automationName"] = "UiAutomator2"
             desired_caps["platformVersion"] = platform_version
-            desired_caps["appPackage"] = "com.saucelabs.mydemoapp.android"
-            desired_caps["appActivity"] = ".view.activities.SplashActivity"  # Relative activity name
+            # Let Appium auto-detect appPackage and appActivity from APK manifest
+            # This is more reliable than hardcoding activity names
         
         self.driver = self._create_driver(desired_caps, appium_server)
         self.wait = WebDriverWait(self.driver, 10) if WebDriverWait is not None else None
@@ -104,4 +109,40 @@ class TestCart:
         if self.platform.lower() == "android":
             return (
                 AppiumBy.ANDROID_UIAUTOMATOR,
-                self._build_uiautomator_selector(locator_strategy, 
+                self._build_uiautomator_selector(locator_strategy, locator_value),
+            )
+        else:
+            # iOS fallback to name or accessibility_id
+            return (AppiumBy.NAME, locator_value)
+
+    def _build_uiautomator_selector(self, locator_strategy: str, locator_value: str) -> str:
+        """Create a UiAutomator2 selector string without using fragile XPath (Android only)."""
+        strategy = (locator_strategy or "text").strip().lower()
+        if strategy == "accessibility_id":
+            return f'new UiSelector().description("{locator_value}")'
+        if strategy == "resource_id":
+            return f'new UiSelector().resourceId("{locator_value}")'
+        return f'new UiSelector().text("{locator_value}")'
+
+    def test_cart(self) -> None:
+        """Exercise the screen actions discovered by the locator agent."""
+        self.tap('resource_id', 'com.saucelabs.mydemoapp.android:id/cartIV')
+
+        # Step 1: verify the Cart title element.
+        self.wait.until(EC.visibility_of_element_located(self._build_locator('resource_id', 'com.saucelabs.mydemoapp.android:id/titleTV')))
+
+        # Step 2: verify the Checkout element.
+        self.wait.until(EC.visibility_of_element_located(self._build_locator('resource_id', 'com.saucelabs.mydemoapp.android:id/cartBt')))
+
+        # Step 3: scroll the Cart items element.
+        self.scroll('text', 'cart items')
+
+        # Step 4: tap the Quantity controls element.
+        self.tap('resource_id', 'com.saucelabs.mydemoapp.android:id/plusIV')
+
+        # Step 5: verify the Subtotal element.
+        self.wait.until(EC.visibility_of_element_located(self._build_locator('resource_id', 'com.saucelabs.mydemoapp.android:id/totalPriceTV')))
+
+        # Step 6: tap the Remove item element.
+        self.tap('resource_id', 'com.saucelabs.mydemoapp.android:id/removeBt')
+

@@ -343,10 +343,10 @@ jobs:
           ls -la
           cd ..
       
-      # iOS - XCUITest driver will handle simulator boot and app installation automatically
-      # Just verify the app exists
-      - name: Verify iOS App (iOS)
+      # iOS - Pre-boot simulator to avoid timeout issues
+      - name: Pre-boot iOS Simulator (iOS)
         if: matrix.platform == 'iOS'
+        timeout-minutes: 10
         run: |
           echo "Verifying iOS app exists..."
           if [ -d "${{ matrix.appPath }}" ]; then
@@ -357,8 +357,50 @@ jobs:
             exit 1
           fi
           
-          echo "Available simulators:"
-          xcrun simctl list devices available | grep "${{ matrix.device }}" || echo "No exact match, XCUITest will find compatible device"
+          echo ""
+          echo "Listing available simulators..."
+          xcrun simctl list devices available
+          
+          echo ""
+          echo "Killing any existing simulator processes..."
+          killall Simulator 2>/dev/null || true
+          xcrun simctl shutdown all 2>/dev/null || true
+          
+          echo ""
+          echo "Finding ${{ matrix.device }} simulator..."
+          DEVICE_ID=$(xcrun simctl list devices available | grep -m 1 "${{ matrix.device }}" | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/')
+          
+          if [ -z "$DEVICE_ID" ]; then
+            echo "✗ ERROR: Could not find ${{ matrix.device }}"
+            echo "Available iPhone devices:"
+            xcrun simctl list devices available | grep "iPhone"
+            exit 1
+          fi
+          
+          echo "Found device ID: $DEVICE_ID"
+          
+          echo ""
+          echo "Pre-booting simulator..."
+          xcrun simctl boot "$DEVICE_ID" || echo "Simulator may already be booted"
+          
+          # Wait for boot to complete
+          echo "Waiting for boot to complete (checking bootstatus)..."
+          for i in {1..60}; do
+            STATUS=$(xcrun simctl list devices | grep "$DEVICE_ID" | awk -F'[()]' '{for(i=1;i<=NF;i++) if($i ~ /Booted/) print $i}')
+            if [ "$STATUS" = "Booted" ]; then
+              echo "✓ Simulator booted successfully after $i checks"
+              break
+            fi
+            sleep 2
+          done
+          
+          # Give extra time for full initialization
+          echo "Allowing additional time for initialization..."
+          sleep 10
+          
+          echo ""
+          echo "Final simulator status:"
+          xcrun simctl list devices | grep "$DEVICE_ID"
       
       # Common Appium setup
       - name: Start Appium Server
