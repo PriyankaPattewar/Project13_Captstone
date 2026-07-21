@@ -262,21 +262,26 @@ jobs:
           echo "Listing available AVDs:"
           avdmanager list avd
           
-          # Configure AVD if it exists
-          AVD_CONFIG="$HOME/.android/avd/${{ matrix.device }}.avd/config.ini"
-          if [ -f "$AVD_CONFIG" ]; then
-            echo "Configuring AVD..."
-            echo "hw.keyboard=yes" >> "$AVD_CONFIG"
-            echo "hw.gpu.enabled=yes" >> "$AVD_CONFIG"
-            echo "hw.gpu.mode=swiftshader_indirect" >> "$AVD_CONFIG"
-            echo "disk.dataPartition.size=4096M" >> "$AVD_CONFIG"
-            echo "✓ AVD configured successfully"
+          # Find AVD config location (can be in .config or directly in home)
+          if [ -f "$HOME/.config/.android/avd/${{ matrix.device }}.avd/config.ini" ]; then
+            AVD_CONFIG="$HOME/.config/.android/avd/${{ matrix.device }}.avd/config.ini"
+          elif [ -f "$HOME/.android/avd/${{ matrix.device }}.avd/config.ini" ]; then
+            AVD_CONFIG="$HOME/.android/avd/${{ matrix.device }}.avd/config.ini"
           else
-            echo "ERROR: AVD config not found at $AVD_CONFIG"
-            echo "Contents of avd directory:"
-            ls -la "$HOME/.android/avd/" || echo "AVD directory not found"
+            echo "ERROR: AVD config not found"
+            echo "Checking possible locations:"
+            ls -la "$HOME/.config/.android/avd/" 2>/dev/null || echo "Not in .config"
+            ls -la "$HOME/.android/avd/" 2>/dev/null || echo "Not in home"
             exit 1
           fi
+          
+          echo "Found AVD config at: $AVD_CONFIG"
+          echo "Configuring AVD..."
+          echo "hw.keyboard=yes" >> "$AVD_CONFIG"
+          echo "hw.gpu.enabled=yes" >> "$AVD_CONFIG"
+          echo "hw.gpu.mode=swiftshader_indirect" >> "$AVD_CONFIG"
+          echo "disk.dataPartition.size=4096M" >> "$AVD_CONFIG"
+          echo "✓ AVD configured successfully"
       
       - name: Start Android Emulator (Android)
         if: matrix.platform == 'Android'
@@ -347,7 +352,19 @@ jobs:
       - name: Install SauceLabs Demo App (iOS)
         if: matrix.platform == 'iOS'
         run: |
-          DEVICE_ID=$(xcrun simctl list devices booted | grep -m 1 'iPhone' | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/')
+          # Find booted device ID
+          echo "Looking for booted simulators..."
+          xcrun simctl list devices | grep Booted
+          
+          DEVICE_ID=$(xcrun simctl list devices | grep -E 'iPhone.*Booted' | head -n 1 | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/')
+          
+          if [ -z "$DEVICE_ID" ]; then
+            echo "ERROR: No booted simulator found"
+            echo "All devices:"
+            xcrun simctl list devices
+            exit 1
+          fi
+          
           echo "Installing app on device: $DEVICE_ID"
           
           # Install app
