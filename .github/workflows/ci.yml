@@ -563,10 +563,11 @@ jobs:
       
       - name: Upload screenshots on failure
         uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()  # Always upload, even if tests pass (will be empty if no failures)
         with:
           name: failure-screenshots-${{ matrix.platform }}
-          path: screenshots/
+          path: artifacts/test_screenshots/
+          if-no-files-found: ignore  # Don't warn if no screenshots (test might pass)
 
   # Job 6: Build & Package
   build:
