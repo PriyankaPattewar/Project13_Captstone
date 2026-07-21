@@ -175,49 +175,47 @@ class TestLogin:
         # Step 1: Tap hamburger menu button to open drawer
         time.sleep(3)  # Wait for app to fully load
         
-        # Try multiple strategies to find and tap the hamburger menu
-        hamburger_tapped = False
-        strategies = [
-            ('accessibility_id', 'open menu'),
-            ('accessibility_id', 'menu'),
-            ('accessibility_id', 'Navigate up'),
-            ('xpath', '//android.view.ViewGroup[@content-desc="open menu"]'),
-            ('xpath', '//android.widget.ImageView[contains(@content-desc, "menu")]'),
-            ('xpath', '//*[@content-desc="open menu"]'),
-        ]
+        # Use the working xpath for hamburger menu
+        print("Tapping hamburger menu...")
+        hamburger = self.driver.find_element(AppiumBy.XPATH, 
+            '//android.widget.ImageView[contains(@content-desc, "menu")]')
+        hamburger.click()
+        print("✓ Hamburger menu opened")
         
-        for strategy_type, strategy_value in strategies:
-            try:
-                print(f"Trying {strategy_type}: {strategy_value}")
-                if strategy_type == 'accessibility_id':
-                    element = self.driver.find_element(AppiumBy.ACCESSIBILITY_ID, strategy_value)
-                else:  # xpath
-                    element = self.driver.find_element(AppiumBy.XPATH, strategy_value)
-                element.click()
-                print(f"✓ Hamburger menu tapped using {strategy_type}: {strategy_value}")
-                hamburger_tapped = True
-                break
-            except Exception as e:
-                print(f"✗ Failed with {strategy_type}: {strategy_value} - {str(e)[:100]}")
-                continue
-        
-        if not hamburger_tapped:
-            # Last resort: dump page source for debugging
-            print("\n=== PAGE SOURCE FOR DEBUGGING ===")
-            print(self.driver.page_source[:2000])  # Print first 2000 chars
-            raise Exception("Could not find hamburger menu with any strategy")
-        
-        # Step 2: Tap Login menu item in the drawer
+        # Step 2: Scroll down to find Login menu item
         time.sleep(1)  # Wait for menu to open
-        self.tap('accessibility_id', 'menu item log in')
+        print("Scrolling to find Login menu item...")
         
-        # Step 3: Type Username
+        # Scroll down in the menu drawer to reveal Login option
+        # Login is below "Crash app (debug)" so we need to scroll
+        for _ in range(3):  # Try scrolling up to 3 times
+            try:
+                # Try to find login menu item
+                login_item = self.driver.find_element(AppiumBy.ACCESSIBILITY_ID, 'menu item log in')
+                print("✓ Found Login menu item")
+                break
+            except:
+                # Scroll down if not found
+                print("Scrolling down in menu...")
+                self.driver.execute_script('mobile: scrollGesture', {
+                    'left': 100, 'top': 400, 'width': 200, 'height': 400,
+                    'direction': 'down',
+                    'percent': 0.75
+                })
+                time.sleep(0.5)
+        
+        # Step 3: Tap Login menu item
+        login_item = self.driver.find_element(AppiumBy.ACCESSIBILITY_ID, 'menu item log in')
+        login_item.click()
+        print("✓ Tapped Login menu item")
+        
+        # Step 4: Type Username
         time.sleep(1)  # Wait for login screen
         self.type('accessibility_id', 'Username input field', 'bob@example.com')
         
-        # Step 4: Type Password
+        # Step 5: Type Password
         self.type('accessibility_id', 'Password input field', '10203040')
         
-        # Step 5: Tap Login Button
+        # Step 6: Tap Login Button
         self.tap('accessibility_id', 'Login button')
 
