@@ -251,16 +251,20 @@ jobs:
         if: matrix.platform == 'Android'
         run: |
           echo "y" | sdkmanager "platform-tools" "platforms;android-34" "emulator" "system-images;android-34;google_apis;x86_64"
-          avdmanager create avd -n ${{ matrix.device }} -k "system-images;android-34;google_apis;x86_64" --device "pixel_6" --force
-      
-      - name: Configure Android Emulator (Android)
-        if: matrix.platform == 'Android'
-        run: |
-          # Configure emulator settings
-          echo "hw.keyboard=yes" >> ~/.android/avd/${{ matrix.device }}.avd/config.ini
-          echo "hw.gpu.enabled=yes" >> ~/.android/avd/${{ matrix.device }}.avd/config.ini
-          echo "hw.gpu.mode=swiftshader_indirect" >> ~/.android/avd/${{ matrix.device }}.avd/config.ini
-          echo "disk.dataPartition.size=4096M" >> ~/.android/avd/${{ matrix.device }}.avd/config.ini
+          echo "no" | avdmanager create avd -n ${{ matrix.device }} -k "system-images;android-34;google_apis;x86_64" --device "pixel_6" --force
+          
+          # Wait for AVD to be created and configure
+          AVD_CONFIG="$HOME/.android/avd/${{ matrix.device }}.avd/config.ini"
+          if [ -f "$AVD_CONFIG" ]; then
+            echo "hw.keyboard=yes" >> "$AVD_CONFIG"
+            echo "hw.gpu.enabled=yes" >> "$AVD_CONFIG"
+            echo "hw.gpu.mode=swiftshader_indirect" >> "$AVD_CONFIG"
+            echo "disk.dataPartition.size=4096M" >> "$AVD_CONFIG"
+            echo "AVD configured successfully"
+          else
+            echo "Warning: config.ini not found at $AVD_CONFIG"
+            ls -la "$HOME/.android/avd/" || true
+          fi
       
       - name: Start Android Emulator (Android)
         if: matrix.platform == 'Android'
@@ -315,6 +319,17 @@ jobs:
       
       # Run tests
       - name: Run Login Test
+        env:
+          APPIUM_SERVER_URL: http://127.0.0.1:4723
+          PLATFORM_NAME: ${{ matrix.platform }}
+          PLATFORM_VERSION: ${{ matrix.platformVersion }}
+          DEVICE_NAME: ${{ matrix.device }}
+          APP_PATH: ${{ github.workspace }}/${{ matrix.appPath }}
+          SELF_HEALING_ENABLED: "true"
+          HEALING_MAX_RETRIES: "3"
+          OPENAI_API_KEY: ${{ secrets.LITELLM_API_KEY }}
+          OPENAI_API_BASE: http://107.22.98.31:10501/v1
+          OPENAI_MODEL: Azure#gpt-5.4
         run: |
           pytest artifacts/generated_appium_scripts/test_login_screen.py \
             -v \
