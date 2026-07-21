@@ -182,40 +182,37 @@ class TestLogin:
         hamburger.click()
         print("✓ Hamburger menu opened")
         
-        # Step 2: Scroll down to find Login menu item
+        # Step 2: Scroll down to find Login menu item and tap it
         time.sleep(1)  # Wait for menu to open
         print("Scrolling to find Login menu item...")
         
-        # Scroll down in the menu drawer to reveal Login option
-        # Login is below "Crash app (debug)" so we need to scroll
-        for _ in range(3):  # Try scrolling up to 3 times
-            try:
-                # Try to find login menu item
-                login_item = self.driver.find_element(AppiumBy.ACCESSIBILITY_ID, 'menu item log in')
-                print("✓ Found Login menu item")
-                break
-            except:
-                # Scroll down if not found
-                print("Scrolling down in menu...")
-                self.driver.execute_script('mobile: scrollGesture', {
-                    'left': 100, 'top': 400, 'width': 200, 'height': 400,
-                    'direction': 'down',
-                    'percent': 0.75
-                })
-                time.sleep(0.5)
+        # Use UiScrollable to scroll to "Log In" text in the menu
+        # This is more reliable than mobile: scrollGesture
+        login_locator = (
+            'new UiScrollable(new UiSelector().scrollable(true))'
+            '.scrollIntoView(new UiSelector().text("Log In"))'
+        )
         
-        # Step 3: Tap Login menu item
-        login_item = self.driver.find_element(AppiumBy.ACCESSIBILITY_ID, 'menu item log in')
-        login_item.click()
-        print("✓ Tapped Login menu item")
+        try:
+            login_item = self.driver.find_element(AppiumBy.ANDROID_UIAUTOMATOR, login_locator)
+            print("✓ Found Login menu item via scroll")
+            login_item.click()
+            print("✓ Tapped Login menu item")
+        except Exception as e:
+            # Fallback: try accessibility_id directly (maybe it's already visible)
+            print(f"UiScrollable failed: {str(e)[:100]}")
+            print("Trying accessibility_id directly...")
+            login_item = self.driver.find_element(AppiumBy.ACCESSIBILITY_ID, 'menu item log in')
+            login_item.click()
+            print("✓ Tapped Login menu item (no scroll needed)")
         
-        # Step 4: Type Username
+        # Step 3: Type Username
         time.sleep(1)  # Wait for login screen
         self.type('accessibility_id', 'Username input field', 'bob@example.com')
         
-        # Step 5: Type Password
+        # Step 4: Type Password
         self.type('accessibility_id', 'Password input field', '10203040')
         
-        # Step 6: Tap Login Button
+        # Step 5: Tap Login Button
         self.tap('accessibility_id', 'Login button')
 
