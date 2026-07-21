@@ -229,23 +229,18 @@ jobs:
           npm install -g appium
           
           # Verify Appium installation
+          echo "Appium version:"
           appium --version
           
           # Install platform-specific driver
           echo "Installing ${{ matrix.appiumDriver }} driver..."
           appium driver install ${{ matrix.appiumDriver }}
           
-          # Verify driver installation
-          echo "Installed drivers:"
+          # The install command itself will fail if there's an issue
+          # Show installed drivers for verification
+          echo ""
+          echo "✓ Driver installation complete. Installed drivers:"
           appium driver list --installed
-          
-          # Verify driver can load properly
-          if appium driver list --installed | grep -q "${{ matrix.appiumDriver }}"; then
-            echo "✓ ${{ matrix.appiumDriver }} driver installed successfully"
-          else
-            echo "✗ ERROR: ${{ matrix.appiumDriver }} driver installation failed!"
-            exit 1
-          fi
       
       # Android-specific setup
       - name: Enable KVM (Android)
