@@ -207,12 +207,103 @@ class TestLogin:
             print("✓ Tapped Login menu item (no scroll needed)")
         
         # Step 3: Type Username
-        time.sleep(1)  # Wait for login screen
-        self.type('accessibility_id', 'Username input field', 'bob@example.com')
+        time.sleep(2)  # Wait for login screen to fully load
+        print("Looking for Username field...")
+        
+        # Try multiple strategies to find username field
+        username_strategies = [
+            ('accessibility_id', 'Username input field'),
+            ('accessibility_id', 'test-Username'),
+            ('xpath', '//android.widget.EditText[@content-desc="test-Username"]'),
+            ('xpath', '//android.widget.EditText[1]'),  # First EditText
+            ('class_name', 'android.widget.EditText'),  # Any EditText
+        ]
+        
+        username_entered = False
+        for strategy_type, strategy_value in username_strategies:
+            try:
+                print(f"  Trying {strategy_type}: {strategy_value}")
+                if strategy_type == 'accessibility_id':
+                    username_field = self.driver.find_element(AppiumBy.ACCESSIBILITY_ID, strategy_value)
+                elif strategy_type == 'xpath':
+                    username_field = self.driver.find_element(AppiumBy.XPATH, strategy_value)
+                elif strategy_type == 'class_name':
+                    username_field = self.driver.find_elements(AppiumBy.CLASS_NAME, strategy_value)[0]
+                
+                username_field.click()
+                username_field.send_keys('bob@example.com')
+                print(f"✓ Username entered using {strategy_type}")
+                username_entered = True
+                break
+            except Exception as e:
+                print(f"  ✗ Failed: {str(e)[:80]}")
+                continue
+        
+        if not username_entered:
+            raise Exception("Could not find username field with any strategy")
         
         # Step 4: Type Password
-        self.type('accessibility_id', 'Password input field', '10203040')
+        print("Looking for Password field...")
+        
+        password_strategies = [
+            ('accessibility_id', 'Password input field'),
+            ('accessibility_id', 'test-Password'),
+            ('xpath', '//android.widget.EditText[@content-desc="test-Password"]'),
+            ('xpath', '//android.widget.EditText[2]'),  # Second EditText
+        ]
+        
+        password_entered = False
+        for strategy_type, strategy_value in password_strategies:
+            try:
+                print(f"  Trying {strategy_type}: {strategy_value}")
+                if strategy_type == 'accessibility_id':
+                    password_field = self.driver.find_element(AppiumBy.ACCESSIBILITY_ID, strategy_value)
+                elif strategy_type == 'xpath':
+                    password_field = self.driver.find_element(AppiumBy.XPATH, strategy_value)
+                
+                password_field.click()
+                password_field.send_keys('10203040')
+                print(f"✓ Password entered using {strategy_type}")
+                password_entered = True
+                break
+            except Exception as e:
+                print(f"  ✗ Failed: {str(e)[:80]}")
+                continue
+        
+        if not password_entered:
+            raise Exception("Could not find password field with any strategy")
         
         # Step 5: Tap Login Button
-        self.tap('accessibility_id', 'Login button')
+        print("Looking for Login button...")
+        
+        login_button_strategies = [
+            ('accessibility_id', 'Login button'),
+            ('accessibility_id', 'test-LOGIN'),
+            ('xpath', '//android.view.ViewGroup[@content-desc="test-LOGIN"]'),
+            ('xpath', '//*[contains(@text, "Login")]'),
+        ]
+        
+        login_tapped = False
+        for strategy_type, strategy_value in login_button_strategies:
+            try:
+                print(f"  Trying {strategy_type}: {strategy_value}")
+                if strategy_type == 'accessibility_id':
+                    login_button = self.driver.find_element(AppiumBy.ACCESSIBILITY_ID, strategy_value)
+                elif strategy_type == 'xpath':
+                    login_button = self.driver.find_element(AppiumBy.XPATH, strategy_value)
+                
+                login_button.click()
+                print(f"✓ Login button tapped using {strategy_type}")
+                login_tapped = True
+                break
+            except Exception as e:
+                print(f"  ✗ Failed: {str(e)[:80]}")
+                continue
+        
+        if not login_tapped:
+            raise Exception("Could not find login button with any strategy")
+        
+        # Wait a bit to see if login succeeds
+        time.sleep(2)
+        print("✓ Login test completed")
 
