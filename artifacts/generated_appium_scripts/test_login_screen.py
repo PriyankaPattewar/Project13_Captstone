@@ -234,6 +234,18 @@ class TestLogin:
                 username_field.send_keys('bob@example.com')
                 print(f"✓ Username entered using {strategy_type}")
                 username_entered = True
+                
+                # Hide keyboard to ensure password field is accessible
+                print("  Hiding keyboard...")
+                try:
+                    self.driver.hide_keyboard()
+                    print("  ✓ Keyboard hidden")
+                except:
+                    # If hide_keyboard fails, tap outside the field
+                    print("  Tapping outside to dismiss keyboard...")
+                    self.driver.tap([(100, 100)])
+                
+                time.sleep(0.5)  # Wait for keyboard to hide
                 break
             except Exception as e:
                 print(f"  ✗ Failed: {str(e)[:80]}")
@@ -244,6 +256,18 @@ class TestLogin:
         
         # Step 4: Type Password
         print("Looking for Password field...")
+        
+        # Scroll down slightly to ensure password field is visible
+        try:
+            print("  Scrolling to ensure password field is visible...")
+            self.driver.execute_script('mobile: scrollGesture', {
+                'left': 100, 'top': 500, 'width': 200, 'height': 300,
+                'direction': 'down',
+                'percent': 0.3
+            })
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"  Scroll failed (might not be needed): {str(e)[:50]}")
         
         password_strategies = [
             ('accessibility_id', 'Password input field'),
