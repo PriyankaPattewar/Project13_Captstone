@@ -73,10 +73,7 @@ class LangChainVisionAgent(VisionAgent):
         # Initialize LangChain components
         self.llm = self._create_llm()
         self.parser = PydanticOutputParser(pydantic_object=ScreenSemanticModel)
-        self.prompt = self._create_prompt(prompt_template)
-        
-        # Create chain with automatic retry
-        self.chain = self._create_chain()
+        self.system_prompt = self._create_prompt(prompt_template)
         
         # Token usage tracking
         self.total_tokens = 0
@@ -119,22 +116,12 @@ class LangChainVisionAgent(VisionAgent):
         
         return ChatOpenAI(**llm_kwargs)
     
-    def _create_prompt(self, custom_template: str | None = None) -> ChatPromptTemplate:
-        """Create LangChain prompt template."""
+    def _create_prompt(self, custom_template: str | None = None) -> str:
+        """Create system prompt template."""
         if custom_template:
-            system_message = custom_template
+            return custom_template
         else:
-            system_message = self._default_prompt_template()
-        
-        # Simple template without Pydantic format instructions to avoid conflicts
-        # We'll handle JSON parsing manually
-        return ChatPromptTemplate.from_messages([
-            ("system", system_message),
-            ("user", [
-                {"type": "text", "text": "Filename hint: {filename}\n\nAnalyze this mobile app screenshot and return a JSON object with screen_name, screen_purpose, and elements array."},
-                {"type": "image_url", "image_url": "data:image/jpeg;base64,{image_data}"}
-            ])
-        ])
+            return self._default_prompt_template()
     
     def _default_prompt_template(self) -> str:
         """Default system prompt for vision analysis."""
@@ -185,12 +172,27 @@ Return ONLY valid JSON matching the ScreenSemanticModel schema."""
         
         filename = Path(image_path).stem
         
-        # Run chain (token tracking may not work with custom gateways)
+        # Build messages dynamically for vision model
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"Filename hint: {filename}\n\nAnalyze this mobile app screenshot and return a JSON object with screen_name, screen_purpose, and elements array."
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}
+                    }
+                ]
+            }
+        ]
+        
+        # Run LLM with vision (token tracking may not work with custom gateways)
         try:
-            result = self.chain.invoke({
-                "filename": filename,
-                "image_data": image_data
-            })
+            result = self.llm.invoke(messages)
             
             logger.info("Vision analysis complete")
             
@@ -205,7 +207,7 @@ Return ONLY valid JSON matching the ScreenSemanticModel schema."""
             import re
             
             # Try to find JSON in the response
-            json_match = re.search(r'\\{.*\\}', content, re.DOTALL)
+            json_match = re.search(r'\{.*\}', content, re.DOTALL)
             if json_match:
                 json_str = json_match.group()
                 ssm_dict = json.loads(json_str)
