@@ -133,7 +133,7 @@ jobs:
           path: |
             bandit-report.json
 
-  # Job 4: Integration Test (Mock Pipeline)
+  # Job 4: Integration Test with LangChain
   integration-test:
     name: Integration Test
     runs-on: ubuntu-latest
@@ -154,20 +154,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Create mock environment
+      - name: Create LangChain environment
+        env:
+          LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
         run: |
           cat > .env << EOF
-          VISION_AGENT_PROVIDER=mock
-          TESTCASE_AGENT_PROVIDER=mock
-          OPENAI_API_KEY=mock_key_for_ci
+          VISION_AGENT_PROVIDER=langchain
+          TESTCASE_AGENT_PROVIDER=openai
+          OPENAI_API_KEY=$LITELLM_API_KEY
+          OPENAI_API_BASE=http://107.22.98.31:10501/v1
+          OPENAI_MODEL=Azure#gpt-5.4
           SELF_HEALING_ENABLED=true
           HEALING_MAX_RETRIES=2
+          ENABLE_LLM_CACHE=true
+          ENABLE_TOKEN_TRACKING=true
           EOF
       
       - name: Create test screenshots directory
         run: mkdir -p artifacts/input_screenshots
       
-      - name: Run SSM generator (mock mode)
+      - name: Run SSM generator with LangChain
+        env:
+          LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.LITELLM_API_KEY }}
+          OPENAI_API_BASE: http://107.22.98.31:10501/v1
+          OPENAI_MODEL: Azure#gpt-5.4
+          VISION_AGENT_PROVIDER: langchain
+          TESTCASE_AGENT_PROVIDER: openai
         run: |
           python pipelines/ssm_generator.py artifacts/input_screenshots
         continue-on-error: true
