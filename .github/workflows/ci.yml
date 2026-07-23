@@ -2,9 +2,9 @@ name: Mobile Test Generator CI/CD
 
 on:
   push:
-    branches: [ main, develop, Aditya, feture_demo ]
+    branches: [ main, develop, Aditya, feature_demo ]
   pull_request:
-    branches: [ main, develop, Aditya, feture_demo ]
+    branches: [ main, develop, Aditya, feature_demo ]
   workflow_dispatch:
 
 env:
