@@ -131,7 +131,7 @@ class LangChainVisionAgent(VisionAgent):
         return ChatPromptTemplate.from_messages([
             ("system", system_message),
             ("user", [
-                {"type": "text", "text": "Filename hint: {filename}\\n\\nAnalyze this mobile app screenshot and return a JSON object with screen_name, screen_purpose, and elements array."},
+                {"type": "text", "text": "Filename hint: {filename}\n\nAnalyze this mobile app screenshot and return a JSON object with screen_name, screen_purpose, and elements array."},
                 {"type": "image_url", "image_url": "data:image/jpeg;base64,{image_data}"}
             ])
         ])
