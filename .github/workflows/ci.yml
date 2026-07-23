@@ -189,6 +189,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - platform: iOS
+            os: macos-latest
+            device: iPhone 17 Pro
+            appPath: demo_mobile_apps/SauceLabs-Demo-App.Simulator.app
+            appiumDriver: xcuitest
           - platform: Android
             os: ubuntu-latest
             device: Pixel_6_API_34
