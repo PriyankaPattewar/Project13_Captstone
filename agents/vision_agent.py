@@ -241,9 +241,31 @@ class MockVisionAgent(VisionAgent):
 
 
 def create_vision_agent(provider: str = "openai", prompt_template: str = None) -> VisionAgent:
+    """Factory function to create vision agent.
+    
+    Args:
+        provider: Agent provider ('openai', 'langchain', or 'mock')
+        prompt_template: Custom prompt template
+        
+    Returns:
+        VisionAgent instance
+    """
     provider = provider.lower().strip()
+    
     if provider == "openai":
         return OpenAIVisionAgent(prompt_template=prompt_template)
+    
+    if provider == "langchain":
+        # Try to import and use LangChain agent
+        try:
+            from agents.langchain_vision_agent import LangChainVisionAgent
+            logger.info("Using LangChain vision agent")
+            return LangChainVisionAgent(prompt_template=prompt_template)
+        except ImportError as e:
+            logger.warning(f"LangChain not available: {e}. Falling back to OpenAI agent.")
+            return OpenAIVisionAgent(prompt_template=prompt_template)
+    
     if provider == "mock":
         return MockVisionAgent()
-    raise ValueError(f"Unsupported vision provider: {provider}")
+    
+    raise ValueError(f"Unsupported vision provider: {provider}. Use 'openai', 'langchain', or 'mock'.")
