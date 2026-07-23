@@ -15,6 +15,13 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 logger = logging.getLogger(__name__)
 
 try:

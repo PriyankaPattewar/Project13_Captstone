@@ -2,9 +2,9 @@ name: Mobile Test Generator CI/CD
 
 on:
   push:
-    branches: [ main, develop, Aditya, feature_demo ]
+    branches: [ main, develop, Aditya, feture_demo ]
   pull_request:
-    branches: [ main, develop, Aditya, feature_demo ]
+    branches: [ main, develop, Aditya, feture_demo ]
   workflow_dispatch:
 
 env:
@@ -673,14 +673,39 @@ jobs:
           EOF
       
       - name: Test LiteLLM Gateway Connection
+        env:
+          LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.LITELLM_API_KEY }}
+          OPENAI_MODEL: Azure#gpt-5.4
+          OPENAI_API_BASE: http://107.22.98.31:10501/v1
         run: |
           python utils/custom_gateway.py
       
       - name: Test LangChain Vision Agent
+        env:
+          LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.LITELLM_API_KEY }}
+          OPENAI_MODEL: Azure#gpt-5.4
+          OPENAI_API_BASE: http://107.22.98.31:10501/v1
+          VISION_AGENT_PROVIDER: langchain
+          TESTCASE_AGENT_PROVIDER: openai
+          SELF_HEALING_ENABLED: "true"
+          ENABLE_LLM_CACHE: "true"
+          ENABLE_TOKEN_TRACKING: "true"
         run: |
           python -c "from agents.langchain_vision_agent import LangChainVisionAgent; agent = LangChainVisionAgent(); print('✅ LangChain agent initialized successfully')"
       
       - name: Test LangChain with SSM Generator
+        env:
+          LITELLM_API_KEY: ${{ secrets.LITELLM_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.LITELLM_API_KEY }}
+          OPENAI_MODEL: Azure#gpt-5.4
+          OPENAI_API_BASE: http://107.22.98.31:10501/v1
+          VISION_AGENT_PROVIDER: langchain
+          TESTCASE_AGENT_PROVIDER: openai
+          SELF_HEALING_ENABLED: "true"
+          ENABLE_LLM_CACHE: "true"
+          ENABLE_TOKEN_TRACKING: "true"
         run: |
           # Create test screenshot directory
           mkdir -p artifacts/input_screenshots
