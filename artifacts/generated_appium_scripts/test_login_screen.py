@@ -234,18 +234,6 @@ class TestLogin:
                 username_field.send_keys('bob@example.com')
                 print(f"✓ Username entered using {strategy_type}")
                 username_entered = True
-                
-                # Hide keyboard to ensure password field is accessible
-                print("  Hiding keyboard...")
-                try:
-                    self.driver.hide_keyboard()
-                    print("  ✓ Keyboard hidden")
-                except:
-                    # If hide_keyboard fails, tap outside the field
-                    print("  Tapping outside to dismiss keyboard...")
-                    self.driver.tap([(100, 100)])
-                
-                time.sleep(0.5)  # Wait for keyboard to hide
                 break
             except Exception as e:
                 print(f"  ✗ Failed: {str(e)[:80]}")
@@ -255,48 +243,25 @@ class TestLogin:
             raise Exception("Could not find username field with any strategy")
         
         # Step 4: Type Password
-        time.sleep(1)  # Extra wait after keyboard hide
         print("Looking for Password field...")
         
         password_strategies = [
+            ('accessibility_id', 'Password input field'),
             ('accessibility_id', 'test-Password'),
             ('xpath', '//android.widget.EditText[@content-desc="test-Password"]'),
-            ('class_name_index', 'android.widget.EditText', 1),  # Second EditText by index
-            ('xpath', '//android.widget.EditText[2]'),
-            ('xpath', '//android.widget.EditText[last()]'),  # Last EditText
-            ('text', 'Password'),  # Find by nearby "Password" label then next EditText
+            ('xpath', '//android.widget.EditText[2]'),  # Second EditText
         ]
         
         password_entered = False
-        for strategy_entry in password_strategies:
+        for strategy_type, strategy_value in password_strategies:
             try:
-                if len(strategy_entry) == 3:
-                    strategy_type, strategy_value, index = strategy_entry
-                else:
-                    strategy_type, strategy_value = strategy_entry
-                    index = None
-                
-                print(f"  Trying {strategy_type}: {strategy_value}" + (f" [index {index}]" if index is not None else ""))
-                
+                print(f"  Trying {strategy_type}: {strategy_value}")
                 if strategy_type == 'accessibility_id':
                     password_field = self.driver.find_element(AppiumBy.ACCESSIBILITY_ID, strategy_value)
                 elif strategy_type == 'xpath':
                     password_field = self.driver.find_element(AppiumBy.XPATH, strategy_value)
-                elif strategy_type == 'class_name_index':
-                    all_edit_texts = self.driver.find_elements(AppiumBy.CLASS_NAME, strategy_value)
-                    if len(all_edit_texts) > index:
-                        password_field = all_edit_texts[index]
-                    else:
-                        raise Exception(f"Only {len(all_edit_texts)} EditTexts found, need index {index}")
-                elif strategy_type == 'text':
-                    # Find Password label, then get next EditText
-                    password_label = self.driver.find_element(AppiumBy.XPATH, f'//*[@text="{strategy_value}"]')
-                    # Get parent and find EditText child
-                    parent = password_label.find_element(AppiumBy.XPATH, './..')
-                    password_field = parent.find_element(AppiumBy.CLASS_NAME, 'android.widget.EditText')
                 
                 password_field.click()
-                time.sleep(0.3)
                 password_field.send_keys('10203040')
                 print(f"✓ Password entered using {strategy_type}")
                 password_entered = True
@@ -306,33 +271,16 @@ class TestLogin:
                 continue
         
         if not password_entered:
-            # Last resort: dump page source for debugging
-            print("\n=== PASSWORD FIELD DEBUG - Page Source ===")
-            page_source = self.driver.page_source
-            # Find all EditText elements in source
-            import re
-            edit_texts = re.findall(r'<android\.widget\.EditText[^>]*>', page_source)
-            for i, et in enumerate(edit_texts):
-                print(f"EditText[{i}]: {et[:150]}")
             raise Exception("Could not find password field with any strategy")
         
         # Step 5: Tap Login Button
-        time.sleep(0.5)
         print("Looking for Login button...")
         
-        # Hide keyboard again if it appeared after password entry
-        try:
-            self.driver.hide_keyboard()
-            print("  Keyboard hidden before login")
-            time.sleep(0.3)
-        except:
-            pass
-        
         login_button_strategies = [
+            ('accessibility_id', 'Login button'),
             ('accessibility_id', 'test-LOGIN'),
             ('xpath', '//android.view.ViewGroup[@content-desc="test-LOGIN"]'),
-            ('xpath', '//*[@text="Login"]'),
-            ('xpath', '//android.widget.Button'),
+            ('xpath', '//*[contains(@text, "Login")]'),
         ]
         
         login_tapped = False
@@ -357,5 +305,5 @@ class TestLogin:
         
         # Wait a bit to see if login succeeds
         time.sleep(2)
-        print("✓ Login test completed successfully!")
+        print("✓ Login test completed")
 
