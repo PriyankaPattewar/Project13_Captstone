@@ -88,9 +88,13 @@ class LangChainVisionAgent(VisionAgent):
     
     def _create_llm(self) -> ChatOpenAI:
         """Create LangChain LLM instance."""
+        # GPT-5 models only support temperature=1, not temperature=0
+        # Check if model name contains 'gpt-5' or use env var
+        temperature = 1 if 'gpt-5' in self.model_name.lower() else 0
+        
         llm_kwargs = {
             "model": self.model_name,
-            "temperature": 0,
+            "temperature": temperature,
             "api_key": self.api_key,
         }
         
@@ -103,6 +107,8 @@ class LangChainVisionAgent(VisionAgent):
                 # LiteLLM may use x-litellm-api-key header
                 # OpenAI client will use api_key in Authorization header by default
                 # If custom header handling is needed, it's handled by the OpenAI client
+        
+        logger.info(f"Creating LLM with model={self.model_name}, temperature={temperature}")
         
         # Enable caching if requested
         if self.enable_cache:
