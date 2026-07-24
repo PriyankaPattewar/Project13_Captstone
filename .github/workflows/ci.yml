@@ -167,7 +167,6 @@ jobs:
           SELF_HEALING_ENABLED=true
           HEALING_MAX_RETRIES=2
           ENABLE_LLM_CACHE=true
-          ENABLE_TOKEN_TRACKING=true
           EOF
       
       - name: Create test screenshots directory
@@ -181,8 +180,6 @@ jobs:
           OPENAI_MODEL: Azure#gpt-5.4
           VISION_AGENT_PROVIDER: langchain
           TESTCASE_AGENT_PROVIDER: openai
-          ENABLE_TOKEN_TRACKING: "true"
-          TOKEN_TRACKING_LOG: artifacts/token_usage.log
         run: |
           python pipelines/ssm_generator.py artifacts/input_screenshots
         continue-on-error: true
@@ -194,7 +191,6 @@ jobs:
           name: integration-test-artifacts
           path: |
             artifacts/ssm_json_output/
-            artifacts/token_usage.log
       
       - name: Verify artifacts structure
         run: |
@@ -804,7 +800,8 @@ jobs:
             echo "- **Screenshots Processed:** $(ls artifacts/ssm_json_output/*.json 2>/dev/null | wc -l)" >> cost-report.md
             echo "- **Status:** ✅ SSM files generated successfully" >> cost-report.md
             echo "" >> cost-report.md
-            echo "> Note: Detailed token tracking requires \`ENABLE_TOKEN_TRACKING=true\`" >> cost-report.md
+            echo "> **Note:** Token tracking via LangChain callbacks is not compatible with LiteLLM gateways." >> cost-report.md
+            echo "> Check your LiteLLM gateway dashboard for actual token usage and costs." >> cost-report.md
           fi
           
           echo "" >> cost-report.md

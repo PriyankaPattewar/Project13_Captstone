@@ -404,6 +404,10 @@ See [SELF_HEALING_GUIDE.md](SELF_HEALING_GUIDE.md) for complete details.
 
 ### **Token Usage Monitoring**
 
+> **Note:** Automatic token tracking via LangChain callbacks only works with standard OpenAI endpoints.  
+> For custom gateways (LiteLLM, Azure OpenAI), check your gateway's dashboard for usage statistics.
+
+**With Standard OpenAI:**
 ```powershell
 # View token usage log
 cat artifacts/token_usage.log
@@ -411,10 +415,14 @@ cat artifacts/token_usage.log
 
 **Example output:**
 ```
-2026-07-23T10:30:15 | Cart | Model: Azure#gpt-5.4 | Tokens: 2847 | Cost: $0.0285
-2026-07-23T10:30:22 | Login | Model: Azure#gpt-5.4 | Tokens: 2156 | Cost: $0.0216
-2026-07-23T10:30:30 | Menu | Model: Azure#gpt-5.4 | Tokens: 1923 | Cost: $0.0192
+2026-07-23T10:30:15 | Cart | Model: gpt-4o-mini | Tokens: 2847 | Cost: $0.0285
+2026-07-23T10:30:22 | Login | Model: gpt-4o-mini | Tokens: 2156 | Cost: $0.0216
 ```
+
+**With LiteLLM Gateway:**
+- Check your LiteLLM dashboard at `http://107.22.98.31:10501/` for actual usage
+- Token counts not available via LangChain callbacks
+- Billing tracked at gateway level
 
 ### **Cost Optimization Features**
 
@@ -422,7 +430,7 @@ cat artifacts/token_usage.log
 - Repeated screenshots use cached results
 - Configurable TTL (default: 24 hours)
 
-✅ **Token Usage Tracking**
+✅ **Token Usage Tracking** (Standard OpenAI only)
 - Per-request logging
 - Cost breakdown by component
 - CI/CD cost analysis reports

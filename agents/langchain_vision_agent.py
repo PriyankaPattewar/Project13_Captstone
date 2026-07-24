@@ -197,21 +197,10 @@ Return ONLY valid JSON matching the ScreenSemanticModel schema."""
             }
         ]
         
-        # Run LLM with vision (token tracking may not work with custom gateways)
+        # Run LLM with vision
+        # Note: Token tracking via callback doesn't work with custom gateways like LiteLLM
         try:
-            # Track token usage if callback available
-            if get_openai_callback is not None:
-                with get_openai_callback() as cb:
-                    result = self.llm.invoke(messages)
-                    
-                    # Update tracking
-                    self.total_tokens += cb.total_tokens
-                    self.total_cost += cb.total_cost
-                    
-                    logger.info(f"Token usage: {cb.total_tokens} tokens, ${cb.total_cost:.4f}")
-            else:
-                result = self.llm.invoke(messages)
-            
+            result = self.llm.invoke(messages)
             logger.info("Vision analysis complete")
             
             # Parse the result
