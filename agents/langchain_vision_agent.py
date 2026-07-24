@@ -200,8 +200,7 @@ Return ONLY valid JSON matching the ScreenSemanticModel schema."""
         # Run LLM with vision (token tracking may not work with custom gateways)
         try:
             # Track token usage if callback available
-            if get_openai_callback:
-                from langchain_community.callbacks import get_openai_callback
+            if get_openai_callback is not None:
                 with get_openai_callback() as cb:
                     result = self.llm.invoke(messages)
                     
