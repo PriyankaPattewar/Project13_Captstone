@@ -181,6 +181,8 @@ jobs:
           OPENAI_MODEL: Azure#gpt-5.4
           VISION_AGENT_PROVIDER: langchain
           TESTCASE_AGENT_PROVIDER: openai
+          ENABLE_TOKEN_TRACKING: "true"
+          TOKEN_TRACKING_LOG: artifacts/token_usage.log
         run: |
           python pipelines/ssm_generator.py artifacts/input_screenshots
         continue-on-error: true
@@ -765,7 +767,32 @@ jobs:
           echo "" >> cost-report.md
           
           if [ -f "artifacts/token_usage.log" ]; then
-            echo "## Token Usage Details" >> cost-report.md
+            echo "## Token Usage Summary" >> cost-report.md
+            echo "" >> cost-report.md
+            
+            # Parse token usage log to calculate totals
+            TOTAL_TOKENS=$(grep -oP 'Tokens: \K\d+' artifacts/token_usage.log | awk '{s+=$1} END {print s}')
+            TOTAL_COST=$(grep -oP 'Cost: \$\K[\d.]+' artifacts/token_usage.log | awk '{s+=$1} END {printf "%.4f", s}')
+            SCREENSHOT_COUNT=$(wc -l < artifacts/token_usage.log)
+            
+            if [ -n "$TOTAL_TOKENS" ] && [ "$TOTAL_TOKENS" -gt 0 ]; then
+              AVG_TOKENS=$(echo "$TOTAL_TOKENS / $SCREENSHOT_COUNT" | bc)
+              AVG_COST=$(echo "scale=4; $TOTAL_COST / $SCREENSHOT_COUNT" | bc)
+              
+              echo "- **Model:** Azure#gpt-5.4" >> cost-report.md
+              echo "- **Total Tokens Used:** $(printf "%'d" $TOTAL_TOKENS) tokens" >> cost-report.md
+              echo "- **Total Cost:** \$$TOTAL_COST" >> cost-report.md
+              echo "- **Screenshots Processed:** $SCREENSHOT_COUNT" >> cost-report.md
+              echo "- **Average per Screenshot:** $(printf "%'d" $AVG_TOKENS) tokens (\$$AVG_COST)" >> cost-report.md
+              echo "- **Status:** ✅ Token tracking active" >> cost-report.md
+            else
+              echo "- **Model:** Azure#gpt-5.4" >> cost-report.md
+              echo "- **Status:** Token tracking enabled but no data captured" >> cost-report.md
+              echo "- **Screenshots Processed:** $(ls artifacts/ssm_json_output/*.json 2>/dev/null | wc -l)" >> cost-report.md
+            fi
+            
+            echo "" >> cost-report.md
+            echo "### Detailed Log" >> cost-report.md
             echo "" >> cost-report.md
             echo "\`\`\`" >> cost-report.md
             cat artifacts/token_usage.log >> cost-report.md
