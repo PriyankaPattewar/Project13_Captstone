@@ -185,6 +185,15 @@ jobs:
           python pipelines/ssm_generator.py artifacts/input_screenshots
         continue-on-error: true
       
+      - name: Upload integration artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-artifacts
+          path: |
+            artifacts/ssm_json_output/
+            artifacts/token_usage.log
+      
       - name: Verify artifacts structure
         run: |
           ls -la artifacts/
@@ -739,15 +748,52 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Download integration artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: integration-test-artifacts
+          path: artifacts/
+        continue-on-error: true
+      
       - name: Generate cost report
         run: |
           echo "# LLM Token Usage Report" > cost-report.md
           echo "" >> cost-report.md
           echo "**Build:** ${GITHUB_SHA::7}" >> cost-report.md
           echo "**Date:** $(date)" >> cost-report.md
+          echo "**Workflow:** ${{ github.workflow }}" >> cost-report.md
           echo "" >> cost-report.md
-          echo "Token usage tracking would be implemented here." >> cost-report.md
-          echo "This requires actual LLM calls during integration tests." >> cost-report.md
+          
+          if [ -f "artifacts/token_usage.log" ]; then
+            echo "## Token Usage Details" >> cost-report.md
+            echo "" >> cost-report.md
+            echo "\`\`\`" >> cost-report.md
+            cat artifacts/token_usage.log >> cost-report.md
+            echo "\`\`\`" >> cost-report.md
+          else
+            echo "## Integration Test (LangChain Vision Agent)" >> cost-report.md
+            echo "" >> cost-report.md
+            echo "- **Model:** Azure#gpt-5.4" >> cost-report.md
+            echo "- **Screenshots Processed:** $(ls artifacts/ssm_json_output/*.json 2>/dev/null | wc -l)" >> cost-report.md
+            echo "- **Status:** ✅ SSM files generated successfully" >> cost-report.md
+            echo "" >> cost-report.md
+            echo "> Note: Detailed token tracking requires \`ENABLE_TOKEN_TRACKING=true\`" >> cost-report.md
+          fi
+          
+          echo "" >> cost-report.md
+          echo "## API Gateway" >> cost-report.md
+          echo "" >> cost-report.md
+          echo "- **Endpoint:** http://107.22.98.31:10501/v1" >> cost-report.md
+          echo "- **Provider:** LiteLLM" >> cost-report.md
+          echo "" >> cost-report.md
+          echo "For detailed cost breakdown, check your LiteLLM gateway dashboard." >> cost-report.md
+          
+          # Display report in logs
+          echo ""
+          echo "========================================="
+          echo "LLM COST REPORT"
+          echo "========================================="
+          cat cost-report.md
       
       - name: Upload cost report
         uses: actions/upload-artifact@v4

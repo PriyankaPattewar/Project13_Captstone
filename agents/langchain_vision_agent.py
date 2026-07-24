@@ -12,6 +12,7 @@ from __future__ import annotations
 import base64
 import logging
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -198,7 +199,19 @@ Return ONLY valid JSON matching the ScreenSemanticModel schema."""
         
         # Run LLM with vision (token tracking may not work with custom gateways)
         try:
-            result = self.llm.invoke(messages)
+            # Track token usage if callback available
+            if get_openai_callback:
+                from langchain_community.callbacks import get_openai_callback
+                with get_openai_callback() as cb:
+                    result = self.llm.invoke(messages)
+                    
+                    # Update tracking
+                    self.total_tokens += cb.total_tokens
+                    self.total_cost += cb.total_cost
+                    
+                    logger.info(f"Token usage: {cb.total_tokens} tokens, ${cb.total_cost:.4f}")
+            else:
+                result = self.llm.invoke(messages)
             
             logger.info("Vision analysis complete")
             
@@ -246,7 +259,30 @@ Return ONLY valid JSON matching the ScreenSemanticModel schema."""
         ssm_dict["source"] = "langchain_vision"
         ssm_dict["source_image"] = str(image_path)
         
+        # Log token usage if tracking enabled
+        if os.getenv("ENABLE_TOKEN_TRACKING", "").lower() == "true":
+            self._log_token_usage(image_path, filename)
+        
         return ssm_dict
+    
+    def _log_token_usage(self, image_path: str, filename: str) -> None:
+        """Log token usage to file for cost tracking."""
+        try:
+            log_path = Path(os.getenv("TOKEN_TRACKING_LOG", "artifacts/token_usage.log"))
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            timestamp = datetime.now().isoformat()
+            log_entry = (
+                f"{timestamp} | {filename} | "
+                f"Model: {self.model_name} | "
+                f"Tokens: {self.total_tokens} | "
+                f"Cost: ${self.total_cost:.4f}\n"
+            )
+            
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(log_entry)
+        except Exception as e:
+            logger.warning(f"Could not log token usage: {e}")
     
     def _infer_screen_name_from_context(
         self,
